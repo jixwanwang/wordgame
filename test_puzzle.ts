@@ -1,6 +1,6 @@
 import { Puzzle, puzzles } from "./lib/puzzles";
 
-function validate_puzzle(p: Puzzle): boolean {
+export function validate_puzzle(p: Puzzle): boolean {
     // check each word
     for (const word of p.words) {
         const positions = p.wordPositions[word];

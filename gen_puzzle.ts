@@ -1,6 +1,7 @@
 import { getRandomWords } from "./dictionary";
 import Grid8x8 from "./lib/grid";
 import { Puzzle } from "./lib/puzzles";
+import { validate_puzzle } from "./test_puzzle";
 
 function placeWord(word: string, grid: Grid8x8): { grid: Grid8x8, positions: [number, number][] } | null {
     const newGrid = Grid8x8.fromGrid(grid);
@@ -147,22 +148,26 @@ function generate_puzzle(difficulty: "normal" | "hard"): Puzzle | null {
     }
 
 
-    return {
+    const puzzle = {
         name: "whatever",
         words: words,
         grid: grid.convertToGameGrid(),
         wordPositions: wordPositions,
     };
+    if (validate_puzzle(puzzle)) {
+        return puzzle;
+    }
+    return null;
 }
 
 function formatPuzzleOutput(puzzle: Puzzle): string {
     const gridLines = puzzle.grid.map(row =>
-        `                [${row.map(cell => `"${cell}"`).join(", ")}]`
+        `                [${row.map(cell => `"${cell}"`).join(", ")}]`,
     ).join(",\n");
 
     const wordPositionLines = Object.entries(puzzle.wordPositions)
         .map(([word, positions]) =>
-            `                "${word}": [${positions.map(pos => `[${pos[0]}, ${pos[1]}]`).join(", ")}]`
+            `                "${word}": [${positions.map(pos => `[${pos[0]}, ${pos[1]}]`).join(", ")}]`,
         ).join(",\n");
 
     return `{
