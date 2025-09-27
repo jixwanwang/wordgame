@@ -1,0 +1,36 @@
+{
+  "name": "wordgame",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint . --ext .ts,.js",
+    "lint:fix": "eslint . --ext .ts,.js --fix",
+    "format": "eslint . --ext .ts,.js --fix"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jixwanwang/wordgame.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/jixwanwang/wordgame/issues"
+  },
+  "homepage": "https://github.com/jixwanwang/wordgame#readme",
+  "dependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.44.1",
+    "@typescript-eslint/parser": "^8.44.1",
+    "eslint": "^9.36.0"
+  }
+}

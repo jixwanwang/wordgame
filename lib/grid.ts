@@ -114,7 +114,7 @@ export class Grid8x8 {
     }
 
     convertToGameGrid(): GameGrid {
-        return this.grid.map(row => [...row]) as GameGrid;
+        return this.grid.map(row => row.map(value => value ? value :  " ")) as GameGrid;
     }
 
     getRevealedCount(): number {
