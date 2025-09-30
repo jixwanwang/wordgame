@@ -1,4 +1,4 @@
-import { getRandomWords } from "./dictionary";
+import { DICTIONARY, getRandomWordsWithLengths, getUncommonRandomWordsWithLengths, UNCOMMON_DICTIONARY } from "./dictionary";
 import Grid8x8 from "./lib/grid";
 import { Puzzle } from "./lib/puzzles";
 import { validate_puzzle } from "./test_puzzle";
@@ -86,11 +86,10 @@ function placeWord(word: string, grid: Grid8x8): { grid: Grid8x8, positions: [nu
     return null;
 }
 
-function generate_puzzle(difficulty: "normal" | "hard"): Puzzle | null {
-    const words = getRandomWords(
-        4,
-        difficulty === "normal" ? [4, 5] : [5, 6, 7],
-    );
+export function generate_puzzle_internal(difficulty: "normal" | "hard"): Puzzle | null {
+    const words = difficulty === "normal" ? getRandomWordsWithLengths(
+        [6, 5, 5, 4],
+    ) : getUncommonRandomWordsWithLengths([6, 5, 5, 4]);
 
     const letterCounts = {};
     let overlapCount = 0;
@@ -109,7 +108,22 @@ function generate_puzzle(difficulty: "normal" | "hard"): Puzzle | null {
         console.log(`not enough overlap ${overlapCount} < ${minOverlapCount}`);
         return null;
     }
-    console.log("found words", words);
+
+    // Check that not all vowels are used
+    const vowels = new Set(["A", "E", "I", "O", "U", "Y"]);
+    const usedVowels = new Set();
+    words.forEach(word => {
+        word.split("").forEach(letter => {
+            if (vowels.has(letter)) {
+                usedVowels.add(letter);
+            }
+        });
+    });
+
+    if (usedVowels.size === vowels.size) {
+        console.log(`all vowels used: ${Array.from(usedVowels).join(", ")}`);
+        return null;
+    }
 
     let grid = new Grid8x8();
     let wordPositions = {};
@@ -117,6 +131,7 @@ function generate_puzzle(difficulty: "normal" | "hard"): Puzzle | null {
     const word = words[0];
     // pick a random position and orientation
     const wordLength = word.length;
+
     // horizontal
     if (Math.random() < 0.5) {
         const maxCol = 8 - wordLength;
@@ -127,7 +142,7 @@ function generate_puzzle(difficulty: "normal" | "hard"): Puzzle | null {
         }
         wordPositions[word] = [...Array(wordLength).keys()].map(i => ([row, startCol + i]));
     } else {
-    // vertical
+        // vertical
         const maxRow = 8 - wordLength;
         const startRow = Math.floor(Math.random() * maxRow);
         const col = Math.floor(Math.random() * 8);
@@ -136,7 +151,6 @@ function generate_puzzle(difficulty: "normal" | "hard"): Puzzle | null {
         }
         wordPositions[word] = [...Array(wordLength).keys()].map(i => ([startRow + i, col]));
     }
-    // TODO: diagonal too
 
     for (let i = 1; i < words.length; i++) {
         const result = placeWord(words[i], grid);
@@ -147,9 +161,8 @@ function generate_puzzle(difficulty: "normal" | "hard"): Puzzle | null {
         wordPositions[words[i]] = result.positions;
     }
 
-
     const puzzle = {
-        name: "whatever",
+        name: `${Date.now()}`,
         words: words,
         grid: grid.convertToGameGrid(),
         wordPositions: wordPositions,
@@ -158,6 +171,26 @@ function generate_puzzle(difficulty: "normal" | "hard"): Puzzle | null {
         return puzzle;
     }
     return null;
+}
+
+function generate_normal_puzzle(): Puzzle | null {
+    while (true) {
+        console.log("trying to generate");
+        const puzzle = generate_puzzle_internal("normal");
+        if (puzzle != null){
+            return puzzle;
+        }
+    }
+}
+
+function generate_hard_puzzle(): Puzzle {
+    while (true) {
+        console.log("trying to generate");
+        const puzzle = generate_puzzle_internal("hard");
+        if (puzzle != null){
+            return puzzle;
+        }
+    }
 }
 
 function formatPuzzleOutput(puzzle: Puzzle): string {
@@ -182,7 +215,8 @@ ${wordPositionLines}
 }`;
 }
 
-const puzzle = generate_puzzle("normal");
+console.log(UNCOMMON_DICTIONARY[4].length, UNCOMMON_DICTIONARY[5].length, UNCOMMON_DICTIONARY[6].length, UNCOMMON_DICTIONARY[7].length);
+const puzzle = generate_hard_puzzle();
 if (puzzle != null) {
     console.log(formatPuzzleOutput(puzzle));
 }

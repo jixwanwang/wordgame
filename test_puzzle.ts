@@ -1,4 +1,4 @@
-import { Puzzle, puzzles } from "./lib/puzzles";
+import { Puzzle } from "./lib/puzzles";
 
 export function validate_puzzle(p: Puzzle): boolean {
     // check each word
@@ -56,52 +56,44 @@ export function validate_puzzle(p: Puzzle): boolean {
                 return false;
             }
         }
+
+        // determine the direction of the word and check for extra letters
+        if (positions.length >= 2) {
+            const [firstRow, firstCol] = positions[0];
+            const [secondRow, secondCol] = positions[1];
+
+            // calculate direction vector
+            const deltaRow = secondRow - firstRow;
+            const deltaCol = secondCol - firstCol;
+
+            // check position before first letter
+            const beforeRow = firstRow - deltaRow;
+            const beforeCol = firstCol - deltaCol;
+            if (beforeRow >= 0 && beforeRow < 8 && beforeCol >= 0 && beforeCol < 8) {
+                const beforeLetter = p.grid[beforeRow][beforeCol];
+                if (beforeLetter && beforeLetter !== " ") {
+                    console.error(
+                        `Word "${word}" has extra letter "${beforeLetter}" before start at position [${beforeRow},${beforeCol}]`,
+                    );
+                    return false;
+                }
+            }
+
+            // check position after last letter
+            const [lastRow, lastCol] = positions[positions.length - 1];
+            const afterRow = lastRow + deltaRow;
+            const afterCol = lastCol + deltaCol;
+            if (afterRow >= 0 && afterRow < 8 && afterCol >= 0 && afterCol < 8) {
+                const afterLetter = p.grid[afterRow][afterCol];
+                if (afterLetter && afterLetter !== " ") {
+                    console.error(
+                        `Word "${word}" has extra letter "${afterLetter}" after end at position [${afterRow},${afterCol}]`,
+                    );
+                    return false;
+                }
+            }
+        }
     }
 
     return true;
 }
-
-function test_all_puzzles(): void {
-    console.log("Testing all puzzles...\n");
-
-    let totalPuzzles = 0;
-    let validPuzzles = 0;
-
-    // Test normal puzzles
-    console.log("=== Normal Puzzles ===");
-    for (const puzzle of puzzles.normal) {
-        totalPuzzles++;
-        console.log(`Testing "${puzzle.name}"...`);
-        if (validate_puzzle(puzzle)) {
-            console.log(`✓ "${puzzle.name}" is valid\n`);
-            validPuzzles++;
-        } else {
-            console.log(`✗ "${puzzle.name}" is invalid\n`);
-        }
-    }
-
-    // Test hard puzzles
-    console.log("=== Hard Puzzles ===");
-    for (const puzzle of puzzles.hard) {
-        totalPuzzles++;
-        console.log(`Testing "${puzzle.name}"...`);
-        if (validate_puzzle(puzzle)) {
-            console.log(`✓ "${puzzle.name}" is valid\n`);
-            validPuzzles++;
-        } else {
-            console.log(`✗ "${puzzle.name}" is invalid\n`);
-        }
-    }
-
-    console.log("\n=== Summary ===");
-    console.log(`${validPuzzles}/${totalPuzzles} puzzles are valid`);
-
-    if (validPuzzles === totalPuzzles) {
-        console.log("🎉 All puzzles pass validation!");
-    } else {
-        console.log("❌ Some puzzles failed validation");
-    }
-}
-
-// Run the tests
-test_all_puzzles();
