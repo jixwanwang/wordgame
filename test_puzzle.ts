@@ -5,14 +5,14 @@ export function validate_puzzle(p: Puzzle): boolean {
     for (const word of p.words) {
         const positions = p.wordPositions[word];
         if (!positions) {
-            console.error(`Word "${word}" not found in wordPositions map`);
+            // console.error(`Word "${word}" not found in wordPositions map`);
             return false;
         }
 
         if (positions.length !== word.length) {
-            console.error(
-                `Word "${word}" has ${word.length} letters but ${positions.length} positions`,
-            );
+            // console.error(
+            //     `Word "${word}" has ${word.length} letters but ${positions.length} positions`,
+            // );
             return false;
         }
 
@@ -23,9 +23,9 @@ export function validate_puzzle(p: Puzzle): boolean {
             const gridLetter = p.grid[row][col];
 
             if (gridLetter !== expectedLetter) {
-                console.error(
-                    `Word "${word}" position [${row},${col}] expected "${expectedLetter}" but grid has "${gridLetter}"`,
-                );
+                // console.error(
+                //     `Word "${word}" position [${row},${col}] expected "${expectedLetter}" but grid has "${gridLetter}"`,
+                // );
                 return false;
             }
         }
@@ -34,7 +34,7 @@ export function validate_puzzle(p: Puzzle): boolean {
         const positionStrings = positions.map(([r, c]) => `${r},${c}`);
         const uniquePositions = new Set(positionStrings);
         if (uniquePositions.size !== positions.length) {
-            console.error(`Word "${word}" has duplicate positions`);
+            // console.error(`Word "${word}" has duplicate positions`);
             return false;
         }
 
@@ -50,9 +50,9 @@ export function validate_puzzle(p: Puzzle): boolean {
             const isAdjacent = rowDiff <= 1 && colDiff <= 1 && rowDiff + colDiff >= 1;
 
             if (!isAdjacent) {
-                console.error(
-                    `Word "${word}" has non-adjacent letters at positions [${row1},${col1}] and [${row2},${col2}]`,
-                );
+                // console.error(
+                //     `Word "${word}" has non-adjacent letters at positions [${row1},${col1}] and [${row2},${col2}]`,
+                // );
                 return false;
             }
         }
@@ -72,9 +72,9 @@ export function validate_puzzle(p: Puzzle): boolean {
             if (beforeRow >= 0 && beforeRow < 8 && beforeCol >= 0 && beforeCol < 8) {
                 const beforeLetter = p.grid[beforeRow][beforeCol];
                 if (beforeLetter && beforeLetter !== " ") {
-                    console.error(
-                        `Word "${word}" has extra letter "${beforeLetter}" before start at position [${beforeRow},${beforeCol}]`,
-                    );
+                    // console.error(
+                    //     `Word "${word}" has extra letter "${beforeLetter}" before start at position [${beforeRow},${beforeCol}]`,
+                    // );
                     return false;
                 }
             }
@@ -86,9 +86,9 @@ export function validate_puzzle(p: Puzzle): boolean {
             if (afterRow >= 0 && afterRow < 8 && afterCol >= 0 && afterCol < 8) {
                 const afterLetter = p.grid[afterRow][afterCol];
                 if (afterLetter && afterLetter !== " ") {
-                    console.error(
-                        `Word "${word}" has extra letter "${afterLetter}" after end at position [${afterRow},${afterCol}]`,
-                    );
+                    // console.error(
+                    //     `Word "${word}" has extra letter "${afterLetter}" after end at position [${afterRow},${afterCol}]`,
+                    // );
                     return false;
                 }
             }

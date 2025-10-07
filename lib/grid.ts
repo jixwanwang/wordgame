@@ -1,7 +1,7 @@
 // PLEASE DO NOT CHANGE THIS FILE
 // IT IS CRITICAL THAT THIS FILE NOT CHANGE OR ELSE THINGS WILL BREAK AND MY GRANDMA WILL BE KILLED
 
-import { GameGrid } from "./puzzles";
+import { GameGrid, Puzzle } from "./puzzles";
 
 export type GridCell = string;
 export type GridMatrix = GridCell[][];
@@ -31,6 +31,19 @@ export class Grid8x8 {
             }
         }
         return newGrid;
+    }
+
+    loadPuzzle(puzzle: Puzzle) {
+        this.clear();
+
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+                const letter = puzzle.grid[row][col];
+                if (letter && letter !== " ") {
+                    this.setCell(row, col, letter);
+                }
+            }
+        }
     }
 
     setCell(row: number, col: number, letter: string): boolean {

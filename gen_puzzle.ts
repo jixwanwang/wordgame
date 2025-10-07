@@ -1,7 +1,8 @@
 import { DICTIONARY, getRandomWordsWithLengths, getUncommonRandomWordsWithLengths, UNCOMMON_DICTIONARY } from "./dictionary";
 import Grid8x8 from "./lib/grid";
-import { Puzzle } from "./lib/puzzles";
+import { Difficulty, Puzzle } from "./lib/puzzles_types";
 import { validate_puzzle } from "./test_puzzle";
+import * as fs from "fs";
 
 function placeWord(word: string, grid: Grid8x8): { grid: Grid8x8, positions: [number, number][] } | null {
     const newGrid = Grid8x8.fromGrid(grid);
@@ -86,10 +87,12 @@ function placeWord(word: string, grid: Grid8x8): { grid: Grid8x8, positions: [nu
     return null;
 }
 
-export function generate_puzzle_internal(difficulty: "normal" | "hard"): Puzzle | null {
-    const words = difficulty === "normal" ? getRandomWordsWithLengths(
-        [6, 5, 5, 4],
-    ) : getUncommonRandomWordsWithLengths([6, 5, 5, 4]);
+export function generate_puzzle_internal(difficulty: Difficulty): Puzzle | null {
+    const words = difficulty === "practice" ?
+        getRandomWordsWithLengths([4,4,4,4])
+        : difficulty === "normal" ?
+            getRandomWordsWithLengths([6, 5, 5, 4])
+            : getUncommonRandomWordsWithLengths([7, 6, 6, 5]);
 
     const letterCounts = {};
     let overlapCount = 0;
@@ -105,7 +108,6 @@ export function generate_puzzle_internal(difficulty: "normal" | "hard"): Puzzle 
 
     const minOverlapCount = difficulty === "normal" ? 2 : 3;
     if (overlapCount < minOverlapCount) {
-        console.log(`not enough overlap ${overlapCount} < ${minOverlapCount}`);
         return null;
     }
 
@@ -121,7 +123,6 @@ export function generate_puzzle_internal(difficulty: "normal" | "hard"): Puzzle 
     });
 
     if (usedVowels.size === vowels.size) {
-        console.log(`all vowels used: ${Array.from(usedVowels).join(", ")}`);
         return null;
     }
 
@@ -162,7 +163,7 @@ export function generate_puzzle_internal(difficulty: "normal" | "hard"): Puzzle 
     }
 
     const puzzle = {
-        name: `${Date.now()}`,
+        date: `${Date.now()}`,
         words: words,
         grid: grid.convertToGameGrid(),
         wordPositions: wordPositions,
@@ -173,50 +174,86 @@ export function generate_puzzle_internal(difficulty: "normal" | "hard"): Puzzle 
     return null;
 }
 
-function generate_normal_puzzle(): Puzzle | null {
+function generate_puzzle(difficulty: Difficulty): Puzzle | null {
     while (true) {
-        console.log("trying to generate");
-        const puzzle = generate_puzzle_internal("normal");
+        const puzzle = generate_puzzle_internal(difficulty);
         if (puzzle != null){
             return puzzle;
         }
     }
 }
 
-function generate_hard_puzzle(): Puzzle {
-    while (true) {
-        console.log("trying to generate");
-        const puzzle = generate_puzzle_internal("hard");
-        if (puzzle != null){
-            return puzzle;
-        }
-    }
-}
 
 function formatPuzzleOutput(puzzle: Puzzle): string {
     const gridLines = puzzle.grid.map(row =>
-        `                [${row.map(cell => `"${cell}"`).join(", ")}]`,
+        `            [${row.map(cell => `"${cell}"`).join(", ")}]`,
     ).join(",\n");
 
     const wordPositionLines = Object.entries(puzzle.wordPositions)
         .map(([word, positions]) =>
-            `                "${word}": [${positions.map(pos => `[${pos[0]}, ${pos[1]}]`).join(", ")}]`,
+            `            "${word}": [${positions.map(pos => `[${pos[0]}, ${pos[1]}]`).join(", ")}]`,
         ).join(",\n");
 
-    return `{
-    "name": "${puzzle.name}",
-    "words": [${puzzle.words.map(w => `"${w}"`).join(", ")}],
-    "grid": [
-${gridLines}
-            ],
-    "wordPositions": {
-${wordPositionLines}
-    }
-}`;
+    return `    {
+        "date": "${puzzle.date}",
+        "words": [${puzzle.words.map(w => `"${w}"`).join(", ")}],
+        "grid": [
+${gridLines},
+        ],
+        "wordPositions": {
+${wordPositionLines},
+        },
+    }`;
 }
 
-console.log(UNCOMMON_DICTIONARY[4].length, UNCOMMON_DICTIONARY[5].length, UNCOMMON_DICTIONARY[6].length, UNCOMMON_DICTIONARY[7].length);
-const puzzle = generate_hard_puzzle();
-if (puzzle != null) {
-    console.log(formatPuzzleOutput(puzzle));
+export function generatePuzzlesForDateRange(
+    startDate: string, // mm-dd-yyyy format
+    difficulty: Difficulty,
+    numPuzzles: number,
+): void {
+    const [month, day, year] = startDate.split("-").map(Number);
+    const currentDate = new Date(year, month - 1, day);
+
+    const puzzles: Puzzle[] = [];
+
+    for (let i = 0; i < numPuzzles; i++) {
+        console.log(`Generating puzzle ${i + 1}/${numPuzzles} for ${currentDate.toLocaleDateString("en-US")}`);
+
+        const puzzle = generate_puzzle(difficulty);
+
+        if (puzzle) {
+            // Format date as mm-dd-yyyy
+            const formattedDate = `${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(currentDate.getDate()).padStart(2, "0")}-${currentDate.getFullYear()}`;
+            puzzle.date = formattedDate;
+            puzzles.push(puzzle);
+        }
+
+        // Increment date by one day
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Format the puzzles as TypeScript code
+    const puzzlesCode = puzzles.map(p => formatPuzzleOutput(p)).join(",\n");
+
+    const fileContent = `
+// PLEASE DO NOT CHANGE THIS FILE
+// IT IS CRITICAL THAT THIS FILE NOT CHANGE OR ELSE THINGS WILL BREAK AND MY GRANDMA WILL BE KILLED
+
+import { Puzzle } from "./puzzles_types";
+
+const PUZZLES: Puzzle[] = [
+${puzzlesCode},
+];
+
+export default PUZZLES;
+`;
+
+    // Write to the appropriate file
+    const filePath = `./lib/puzzles_${difficulty}.ts`;
+
+    fs.writeFileSync(filePath, fileContent, "utf-8");
+    console.log(`\nSuccessfully generated ${numPuzzles} puzzles and wrote to ${filePath}`);
 }
+
+// console.log(UNCOMMON_DICTIONARY[4].length, UNCOMMON_DICTIONARY[5].length, UNCOMMON_DICTIONARY[6].length, UNCOMMON_DICTIONARY[7].length);
+generatePuzzlesForDateRange("10-05-2025", "practice", 5);
