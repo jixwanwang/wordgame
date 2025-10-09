@@ -33,7 +33,7 @@ export function formatPuzzleDate(dateString: string): string {
  */
 export function calculateRevealedLetterCount(words: string[], revealedLetters: string[]): number {
   let count = 0;
-  const revealedSet = new Set(revealedLetters.map(l => l.toUpperCase()));
+  const revealedSet = new Set(revealedLetters.map((l) => l.toUpperCase()));
 
   for (const word of words) {
     for (const letter of word) {

@@ -101,7 +101,7 @@ function placeWord(
 export function generate_puzzle_internal(difficulty: Difficulty): Puzzle | null {
   const words =
     difficulty === "practice"
-      ? getRandomWordsWithLengths([4, 4, 4, 4])
+      ? getRandomWordsWithLengths([4, 4, 4])
       : difficulty === "normal"
         ? getRandomWordsWithLengths([6, 5, 5, 4])
         : getUncommonRandomWordsWithLengths([7, 6, 6, 5]);
@@ -271,4 +271,4 @@ export default PUZZLES;
 }
 
 // console.log(UNCOMMON_DICTIONARY[4].length, UNCOMMON_DICTIONARY[5].length, UNCOMMON_DICTIONARY[6].length, UNCOMMON_DICTIONARY[7].length);
-generatePuzzlesForDateRange("10-05-2025", "practice", 5);
+generatePuzzlesForDateRange("10-08-2025", "practice", 5);

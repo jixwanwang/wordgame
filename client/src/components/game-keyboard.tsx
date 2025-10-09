@@ -21,11 +21,14 @@ export function GameKeyboard({
 }: GameKeyboardProps) {
   const getKeyClass = (letter: string) => {
     const state = getLetterState(letter);
-    return cn("w-8 sm:w-9 h-12 border border-gray-300 rounded text-sm font-bold transition-colors", {
-      "bg-gray-200 hover:bg-gray-300 text-dark": state === "default",
-      "bg-absent text-white": state === "absent",
-      "bg-green-600 text-white": state === "revealed",
-    });
+    return cn(
+      "w-8 sm:w-9 h-12 border border-gray-300 rounded text-sm font-bold transition-colors",
+      {
+        "bg-gray-200 hover:bg-gray-300 text-dark": state === "default",
+        "bg-absent text-white": state === "absent",
+        "bg-green-600 text-white": state === "revealed",
+      },
+    );
   };
 
   return (

@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { GameState, Guess } from "@shared/schema";
 import { Grid8x8 } from "@shared/lib/grid";
-import {NUM_GUESSES} from "@shared/lib/game-utils";
+import { NUM_GUESSES } from "@shared/lib/game-utils";
 import { getPuzzlesByDifficulty, type Puzzle } from "@shared/lib/puzzles";
 import { saveGameState, getGameStateForDate } from "@/lib/game-storage";
 
@@ -10,7 +10,7 @@ function getTodaysPuzzle(difficulty: "normal" | "hard"): Puzzle {
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   const year = now.getFullYear();
-  const todayDate = `10-05-2025`; //`${month}-${day}-${year}`;
+  const todayDate = `${month}-${day}-${year}`;
 
   const availablePuzzles = getPuzzlesByDifficulty(difficulty);
   const todaysPuzzle = availablePuzzles.find((puzzle: Puzzle) => puzzle.date === todayDate);

@@ -48,12 +48,11 @@ export default function Game({ difficulty }: GameProps) {
   // Show game over modal when game ends
   useEffect(() => {
     if (gameState.gameStatus === "won" || gameState.gameStatus === "lost") {
-        setTimeout(() => {
-            setShowGameOver(true);
-        }, 1500);
+      setTimeout(() => {
+        setShowGameOver(true);
+      }, 1500);
     }
   }, [gameState.gameStatus]);
-
 
   const handleGuess = useCallback(() => {
     if (gameState.gameStatus !== "playing") return;
@@ -119,12 +118,10 @@ export default function Game({ difficulty }: GameProps) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleGuess, handleBackspaceClick, gameState.gameStatus]);
 
-
-
-if (currentPuzzle == null) {
-    return <div>SOMETHING WENT REALLY WRONG</div>
-}
-const puzzleNumber = getGameNumber(currentPuzzle.date)
+  if (currentPuzzle == null) {
+    return <div>SOMETHING WENT REALLY WRONG</div>;
+  }
+  const puzzleNumber = getGameNumber(currentPuzzle.date);
 
   return (
     <div className="bg-white font-game min-h-screen">
@@ -133,10 +130,7 @@ const puzzleNumber = getGameNumber(currentPuzzle.date)
         <div className="flex items-center justify-center gap-3">
           <div className="flex items-center gap-1">
             <h1 className="text-2xl sm:text-3xl font-bold text-dark">
-              Crosses{" "}
-              {difficulty !== "practice" ?
-                  `#${puzzleNumber}`
-              : ''}
+              Crosses {difficulty !== "practice" ? `#${puzzleNumber}` : ""}
             </h1>
           </div>
           <button
@@ -176,7 +170,7 @@ const puzzleNumber = getGameNumber(currentPuzzle.date)
         numGuesses={NUM_GUESSES - gameState.totalGuessesRemaining}
         totalLettersRevealed={calculateRevealedLetterCount(
           currentPuzzle.words,
-          grid.getRevealedLetters()
+          grid.getRevealedLetters(),
         )}
         puzzleNumber={puzzleNumber}
         currentStreak={getCurrentStreak()}
@@ -232,7 +226,9 @@ const puzzleNumber = getGameNumber(currentPuzzle.date)
           getLetterState={getKeyboardLetterState}
         />
 
-        <div className="text-center text-xs text-gray-400 mt-6 sm:mt-10">© 2025 Jixuan Wang. All Rights Reserved </div>
+        <div className="text-center text-xs text-gray-400 mt-6 sm:mt-10">
+          © 2025 Jixuan Wang. All Rights Reserved{" "}
+        </div>
       </main>
     </div>
   );
