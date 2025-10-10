@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { NUM_GUESSES } from "@shared/lib/game-utils";
+import { getCurrentStreak } from "@/lib/game-storage";
 
 interface GameOverModalProps {
   open: boolean;
@@ -10,7 +11,6 @@ interface GameOverModalProps {
   numGuesses: number;
   totalLettersRevealed: number;
   puzzleNumber: number;
-  currentStreak: number;
 }
 
 export function GameOverModal({
@@ -20,18 +20,19 @@ export function GameOverModal({
   numGuesses,
   totalLettersRevealed,
   puzzleNumber,
-  currentStreak,
 }: GameOverModalProps) {
   const [copied, setCopied] = useState(false);
 
-  const shareText =
-    currentStreak > 0
-      ? `Crosses#${puzzleNumber} - ${numGuesses}|${totalLettersRevealed} 🔥${currentStreak}`
-      : `Crosses#${puzzleNumber} - ${numGuesses}|${totalLettersRevealed}`;
+  const shareText = () => {
+    const currentStreakText = getCurrentStreak();
+    return won
+      ? `Crosses#${puzzleNumber} - ${totalLettersRevealed}/${numGuesses} 🔥${currentStreakText}`
+      : `Crosses#${puzzleNumber} - ${totalLettersRevealed}/${numGuesses}`;
+  };
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(shareText);
+      await navigator.clipboard.writeText(shareText());
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -48,11 +49,12 @@ export function GameOverModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 flex flex-col items-center">
-          {won && currentStreak > 0 ? (
+        {/* this mb-1 is for visual centering. the title is all smaller letters so it feels further from the top. */}
+        <div className="space-y-4 flex flex-col items-center mb-1">
+          {won ? (
             <div>
               <p className="text-lg font-semibold text-gray-800">
-                Current Streak: 🔥{currentStreak}
+                Current Streak: 🔥{getCurrentStreak()}
               </p>
             </div>
           ) : null}
@@ -64,10 +66,12 @@ export function GameOverModal({
               {copied ? "Copied!" : "Share Results"}
             </Button>
             <div>
-              <div>
-                {numGuesses} / {NUM_GUESSES} guesses used
+              <div className="text-sm">
+                <span className="font-bold">{totalLettersRevealed}</span> / 20 letters revealed
               </div>
-              <div>{totalLettersRevealed} / 20 letters revealed</div>
+              <div className="text-sm">
+                <span className="font-bold">{numGuesses}</span> / {NUM_GUESSES} guesses used
+              </div>
             </div>
           </div>
         </div>

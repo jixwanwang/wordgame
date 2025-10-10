@@ -8,7 +8,6 @@ import { GameOverModal } from "@/components/game-over-modal";
 import { useGameState } from "@/hooks/use-game-state";
 import { Input } from "@/components/ui/input";
 import { HelpCircle } from "lucide-react";
-import { getCurrentStreak } from "@/lib/game-storage";
 import { getGameNumber, NUM_GUESSES, calculateRevealedLetterCount } from "@shared/lib/game-utils";
 
 interface GameProps {
@@ -31,6 +30,16 @@ export default function Game({ difficulty }: GameProps) {
   const [showGameOver, setShowGameOver] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Show how to play modal for first-time users
+  useEffect(() => {
+    const hasHistory = localStorage.getItem("wordgame-history");
+    if (!hasHistory) {
+      setTimeout(() => {
+        setShowHowToPlay(true);
+      }, 1000);
+    }
+  }, []);
 
   const showToast = useCallback((text: string) => {
     // Clear any existing timeout
@@ -75,7 +84,6 @@ export default function Game({ difficulty }: GameProps) {
 
   const handleLetterClick = useCallback(
     (letter: string) => {
-      console.log("handleLetterClick called with letter:", letter, gameState.gameStatus);
       if (gameState.gameStatus !== "playing") return;
       setInputValue((prev) => prev + letter);
     },
@@ -173,7 +181,6 @@ export default function Game({ difficulty }: GameProps) {
           grid.getRevealedLetters(),
         )}
         puzzleNumber={puzzleNumber}
-        currentStreak={getCurrentStreak()}
       />
 
       <main className="container mx-auto px-2 sm:px-4 pb-4 max-w-2xl">

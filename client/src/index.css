@@ -205,3 +205,9 @@
   background-color: var(--cell-bg) !important;
   background-image: var(--cell-bg-image) !important;
 }
+
+/* Prevent iOS from rendering arrows as emojis */
+.crossword-cell span {
+  font-variant-emoji: text;
+  -webkit-font-variant-emoji: text;
+}

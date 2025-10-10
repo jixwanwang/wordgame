@@ -1,7 +1,17 @@
 // Utility functions for game calculations
 
-const GAME_START_DATE = new Date("2025-09-06");
+const GAME_START_DATE = new Date(2025, 8, 6); // September 6, 2025 (month is 0-indexed)
 export const NUM_GUESSES = 15;
+
+/**
+ * Parse date string in MM-DD-YYYY format to Date object
+ * @param dateString - Date string in format MM-DD-YYYY
+ * @returns Date object
+ */
+function parseDate(dateString: string): Date {
+  const [month, day, year] = dateString.split("-").map(Number);
+  return new Date(year, month - 1, day); // month is 0-indexed in Date constructor
+}
 
 /**
  * Calculate game number based on days since 09-06-2025
@@ -9,7 +19,7 @@ export const NUM_GUESSES = 15;
  * @returns Game number (1-indexed)
  */
 export function getGameNumber(dateString: string): number {
-  const date = new Date(dateString);
+  const date = parseDate(dateString);
   const diffTime = date.getTime() - GAME_START_DATE.getTime();
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   return diffDays + 1;

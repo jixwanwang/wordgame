@@ -70,22 +70,23 @@ export function CrosswordGrid({
         const deltaCol = col2 - col1;
 
         // Determine direction arrow
+        // Use Unicode variation selector U+FE0E to force text rendering (prevent emoji on iOS)
         let direction = "";
         if (deltaRow === 0 && deltaCol === 1)
-          direction = "→"; // horizontal right
+          direction = "→\uFE0E"; // horizontal right
         else if (deltaRow === 0 && deltaCol === -1)
-          direction = "←"; // horizontal left
+          direction = "←\uFE0E"; // horizontal left
         else if (deltaRow === 1 && deltaCol === 0)
-          direction = "↓"; // vertical down
+          direction = "↓\uFE0E"; // vertical down
         else if (deltaRow === -1 && deltaCol === 0)
-          direction = "↑"; // vertical up
+          direction = "↑\uFE0E"; // vertical up
         else if (deltaRow === 1 && deltaCol === 1)
-          direction = "↘"; // diagonal down-right
+          direction = "↘\uFE0E"; // diagonal down-right
         else if (deltaRow === 1 && deltaCol === -1)
-          direction = "↙"; // diagonal down-left
+          direction = "↙\uFE0E"; // diagonal down-left
         else if (deltaRow === -1 && deltaCol === 1)
-          direction = "↗"; // diagonal up-right
-        else if (deltaRow === -1 && deltaCol === -1) direction = "↖"; // diagonal up-left
+          direction = "↗\uFE0E"; // diagonal up-right
+        else if (deltaRow === -1 && deltaCol === -1) direction = "↖\uFE0E"; // diagonal up-left
 
         // Add arrow to first letter position
         const [firstRow, firstCol] = positions[0];
