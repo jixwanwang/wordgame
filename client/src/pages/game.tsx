@@ -4,11 +4,13 @@ import { CrosswordGrid } from "@/components/crossword-grid";
 import { GameStats } from "@/components/game-stats";
 import { GameKeyboard } from "@/components/game-keyboard";
 import { HowToPlayModal } from "@/components/how-to-play-modal";
-import { GameOverModal } from "@/components/game-over-modal";
+import { GameOverStats } from "@/components/game-over-stats";
 import { useGameState } from "@/hooks/use-game-state";
-import { Input } from "@/components/ui/input";
+import { SquareInput } from "@/components/square-input";
 import { HelpCircle } from "lucide-react";
 import { getGameNumber, NUM_GUESSES, calculateRevealedLetterCount } from "@shared/lib/game-utils";
+import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 interface GameProps {
   difficulty: "normal" | "hard" | "practice";
@@ -22,12 +24,11 @@ export default function Game({ difficulty }: GameProps) {
     isLetterRevealed,
     getKeyboardLetterState,
     currentPuzzle,
-    isLoadingPuzzle,
+    resetGame,
   } = useGameState(difficulty);
 
   const [inputValue, setInputValue] = useState("");
   const [showHowToPlay, setShowHowToPlay] = useState(false);
-  const [showGameOver, setShowGameOver] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
@@ -54,15 +55,6 @@ export default function Game({ difficulty }: GameProps) {
     }, 1500);
   }, []);
 
-  // Show game over modal when game ends
-  useEffect(() => {
-    if (gameState.gameStatus === "won" || gameState.gameStatus === "lost") {
-      setTimeout(() => {
-        setShowGameOver(true);
-      }, 1500);
-    }
-  }, [gameState.gameStatus]);
-
   const handleGuess = useCallback(() => {
     if (gameState.gameStatus !== "playing") return;
 
@@ -71,7 +63,7 @@ export default function Game({ difficulty }: GameProps) {
 
     if (guess.length === 1) {
       if (gameState.guessedLetters.includes(guess)) {
-        showToast(`${guess} already guessed`);
+        showToast(`Already guessed`);
         return;
       }
       makeGuess({ type: "letter", value: guess });
@@ -85,9 +77,16 @@ export default function Game({ difficulty }: GameProps) {
   const handleLetterClick = useCallback(
     (letter: string) => {
       if (gameState.gameStatus !== "playing") return;
-      setInputValue((prev) => prev + letter);
+      setInputValue((prev) => {
+        if (prev.length < 6) {
+          return prev + letter;
+        } else {
+          showToast("Longest word is 6 letters");
+          return prev;
+        }
+      });
     },
-    [gameState.gameStatus],
+    [gameState.gameStatus, showToast],
   );
 
   const handleBackspaceClick = useCallback(() => {
@@ -108,11 +107,13 @@ export default function Game({ difficulty }: GameProps) {
         // Only add single letter characters
         const letter = e.key.toUpperCase();
         setInputValue((prev) => {
-          // Limit to reasonable length (10 characters max)
-          if (prev.length < 10) {
+          // Limit to 6 characters max (longest word is 6 letters)
+          if (prev.length < 6) {
             return prev + letter;
+          } else {
+            showToast("Longest word is 6 letters");
+            return prev;
           }
-          return prev;
         });
       }
 
@@ -124,7 +125,7 @@ export default function Game({ difficulty }: GameProps) {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleGuess, handleBackspaceClick, gameState.gameStatus]);
+  }, [handleGuess, handleBackspaceClick, gameState.gameStatus, showToast]);
 
   if (currentPuzzle == null) {
     return <div>SOMETHING WENT REALLY WRONG</div>;
@@ -170,68 +171,94 @@ export default function Game({ difficulty }: GameProps) {
         isPractice={gameState.difficulty === "practice"}
       />
 
-      {/* Game Over Modal */}
-      <GameOverModal
-        open={showGameOver}
-        onOpenChange={setShowGameOver}
-        won={gameState.gameStatus === "won"}
-        numGuesses={NUM_GUESSES - gameState.totalGuessesRemaining}
-        totalLettersRevealed={calculateRevealedLetterCount(
-          currentPuzzle.words,
-          grid.getRevealedLetters(),
-        )}
-        puzzleNumber={puzzleNumber}
-      />
-
       <main className="container mx-auto px-2 sm:px-4 pb-4 max-w-2xl">
-        {/* Crossword Grid or Loading Spinner */}
-        {isLoadingPuzzle ? (
-          <div className="flex justify-center items-center mb-6 h-64" data-testid="puzzle-loading">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-          </div>
-        ) : (
+        <div className="relative">
           <CrosswordGrid
             grid={grid}
             isLetterRevealed={isLetterRevealed}
             currentPuzzle={currentPuzzle}
             gameStatus={gameState.gameStatus}
           />
-        )}
-
-        {/* Input Section */}
-        <div className="flex justify-center my-3">
-          <div className="flex flex-col items-center gap-1 relative">
-            {/* Toast message - absolutely positioned over the input area */}
-            {toastMessage && (
-              <div
-                className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-[8px] bg-gray-800 text-white px-4 py-2 rounded-md text-sm font-medium shadow-lg z-10 whitespace-nowrap"
-                data-testid="toast-message"
-              >
-                {toastMessage}
-              </div>
-            )}
-            <GameStats gameState={gameState} grid={grid} />
-            <Input
-              type="text"
-              placeholder="Guess a letter or word"
-              className="px-4 py-2 min-w-[270px] text-xs sm:text-sm border-2 border-gray-300 rounded-lg font-bold uppercase text-center focus:border-correct focus:outline-none"
-              maxLength={10}
-              value={inputValue}
-              readOnly
-              disabled
-              tabIndex={-1}
-              data-testid="guess-input"
-            />
-          </div>
         </div>
 
-        {/* On-screen Keyboard */}
-        <GameKeyboard
-          onLetterClick={handleLetterClick}
-          onEnterClick={handleGuess}
-          onBackspaceClick={handleBackspaceClick}
-          getLetterState={getKeyboardLetterState}
-        />
+        <div className="flex justify-center">
+          <div className="inline-flex flex-col">
+            {/* Input Section, only visible when playing */}
+            {gameState.gameStatus === "playing" ? (
+              <div className="relative w-full mb-3 flex flex-col gap-3">
+                {/* Square input - centered */}
+                <div className="flex justify-center">
+                  <SquareInput value={inputValue} maxLength={6} />
+                </div>
+
+                {/* Guesses and button row */}
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 flex justify-start">
+                    <GameStats gameState={gameState} grid={grid} />
+                  </div>
+                  <button
+                    onClick={handleGuess}
+                    disabled={!inputValue}
+                    className="px-2 py-1 bg-gray-200 hover:bg-gray-300 border-2 border-gray-300 rounded-lg text-sm font-bold text-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-200"
+                    data-testid="guess-button"
+                  >
+                    {inputValue.length <= 1 ? "GUESS" : "GUESS WORD"}
+                  </button>
+                </div>
+
+                {/* Toast message - absolutely positioned at the bottom of the grid */}
+                {toastMessage && (
+                  <div
+                    className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-[8px] bg-gray-800 text-white px-4 py-2 rounded-md text-sm font-medium shadow-lg z-10 whitespace-nowrap"
+                    data-testid="toast-message"
+                  >
+                    {toastMessage}
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {/* On-screen Keyboard or Game Over Stats */}
+            {gameState.gameStatus === "playing" ? (
+              <GameKeyboard
+                onLetterClick={handleLetterClick}
+                onBackspaceClick={handleBackspaceClick}
+                getLetterState={getKeyboardLetterState}
+              />
+            ) : gameState.difficulty !== "practice" ? (
+              <div className="mb-2 flex flex-col items-center gap-4">
+                <GameStats gameState={gameState} grid={grid} />
+                <GameOverStats
+                  won={gameState.gameStatus === "won"}
+                  numGuesses={NUM_GUESSES - gameState.totalGuessesRemaining}
+                  totalLettersRevealed={calculateRevealedLetterCount(
+                    currentPuzzle.words,
+                    grid.getRevealedLetters(),
+                  )}
+                  puzzleNumber={puzzleNumber}
+                />
+              </div>
+            ) : (
+              <div className="flex gap-4">
+                <Button
+                  className="bg-gray-600 mt-4 hover:bg-gray-700 text-white"
+                  onClick={() => resetGame}
+                  data-testid="practice-button"
+                >
+                  {"Practice again"}
+                </Button>
+                <Link href={"/"}>
+                  <Button
+                    className="bg-gray-600 mt-4 hover:bg-gray-700 text-white"
+                    onClick={() => {}}
+                  >
+                    {"Back to today's puzzle"}
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className="text-center text-xs text-gray-400 mt-6 sm:mt-10">
           © 2025 Jixuan Wang. All Rights Reserved{" "}

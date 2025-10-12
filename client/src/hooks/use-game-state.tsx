@@ -37,7 +37,6 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
 
   // State for current puzzle and loading
   const [currentPuzzle, setCurrentPuzzle] = useState<Puzzle | null>(null);
-  const [isLoadingPuzzle, setIsLoadingPuzzle] = useState(true);
 
   // Initialize game state
   const [gameState, setGameState] = useState<GameState>({
@@ -106,8 +105,6 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
         });
       }
     }
-
-    setIsLoadingPuzzle(false);
   }, [grid, difficulty]);
 
   // Save game state to local storage whenever it changes (skip practice mode)
@@ -186,9 +183,6 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
     // we only allow resetting the game in practice mode
     if (!isPracticeMode) return;
 
-    // Set loading state
-    setIsLoadingPuzzle(true);
-
     // Clear the grid
     grid.clear();
 
@@ -205,8 +199,6 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
     // Clear current puzzle
     setCurrentPuzzle(puzzle);
     grid.loadPuzzle(puzzle);
-
-    setIsLoadingPuzzle(false);
   }, [difficulty, grid]);
 
   const isLetterRevealed = useCallback(
@@ -245,6 +237,5 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
     isLetterRevealed,
     getKeyboardLetterState,
     currentPuzzle,
-    isLoadingPuzzle,
   };
 }

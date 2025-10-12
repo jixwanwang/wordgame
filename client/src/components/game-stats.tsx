@@ -31,7 +31,7 @@ export function GameStats({ gameState }: GameStatsProps) {
   const getGameStatusMessage = () => {
     switch (gameState.gameStatus) {
       case "won":
-        return "You've found all the words!";
+        return "You won!";
       case "lost":
         return "Nice try!";
       default:
@@ -40,20 +40,24 @@ export function GameStats({ gameState }: GameStatsProps) {
   };
 
   return (
-    <div className="flex gap-6">
+    <div className="flex justify-center gap-6">
       {gameState.gameStatus !== "playing" ? (
-        <div
-          className={`text-lg font-bold ${getGameStatusColor()}`}
-          data-testid="game-status-message"
-        >
-          {getGameStatusMessage()}
+        <div className="text-center">
+          <div
+            className={`text-lg font-bold ${getGameStatusColor()}`}
+            data-testid="game-status-message"
+          >
+            {getGameStatusMessage()}
+          </div>
         </div>
       ) : (
         <div className="flex gap-2 items-center">
-          <div className={cn("text-lg font-bold", getGuessesColor())} data-testid="total-guesses">
+          <div className={cn("text-xl font-bold", getGuessesColor())} data-testid="total-guesses">
             {guessesLeft}
           </div>
-          <div className={cn("text-sm text-gray-600 tracking-wide")}>guesses remaining</div>
+          <div className={cn("text-md text-gray-600 tracking-wide whitespace-nowrap")}>
+            guesses remaining
+          </div>
         </div>
       )}
     </div>

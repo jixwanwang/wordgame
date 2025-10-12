@@ -2,7 +2,6 @@ import { cn } from "@/lib/utils";
 
 interface GameKeyboardProps {
   onLetterClick: (letter: string) => void;
-  onEnterClick: () => void;
   onBackspaceClick: () => void;
   getLetterState: (letter: string) => "default" | "absent" | "revealed";
 }
@@ -15,7 +14,6 @@ const KEYBOARD_ROWS = [
 
 export function GameKeyboard({
   onLetterClick,
-  onEnterClick,
   onBackspaceClick,
   getLetterState,
 }: GameKeyboardProps) {
@@ -63,13 +61,6 @@ export function GameKeyboard({
 
       {/* Third row */}
       <div className="flex justify-center gap-1">
-        <button
-          className="w-16 h-12 bg-gray-200 hover:bg-gray-300 border border-gray-300 rounded text-xs font-bold text-dark transition-colors"
-          onClick={onEnterClick}
-          data-testid="key-enter"
-        >
-          GUESS
-        </button>
         {KEYBOARD_ROWS[2].map((letter) => (
           <button
             key={letter}
@@ -81,7 +72,7 @@ export function GameKeyboard({
           </button>
         ))}
         <button
-          className="w-12 h-12 bg-gray-200 hover:bg-gray-300 border border-gray-300 rounded text-xs font-bold text-dark transition-colors"
+          className="w-12 h-12 bg-gray-200 hover:bg-gray-300 border border-gray-300 rounded text-md font-bold text-dark transition-colors"
           onClick={onBackspaceClick}
           data-testid="key-backspace"
         >
