@@ -72,7 +72,7 @@ export function GameKeyboard({
           </button>
         ))}
         <button
-          className="w-12 h-12 bg-gray-200 hover:bg-gray-300 border border-gray-300 rounded text-md font-bold text-dark transition-colors"
+          className="w-12 h-12 bg-gray-200 hover:bg-gray-300 border border-gray-300 rounded text-lg font-bold text-dark transition-colors"
           onClick={onBackspaceClick}
           data-testid="key-backspace"
         >

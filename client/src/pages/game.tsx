@@ -11,6 +11,7 @@ import { HelpCircle } from "lucide-react";
 import { getGameNumber, NUM_GUESSES, calculateRevealedLetterCount } from "@shared/lib/game-utils";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { isValidWord } from "@shared/lib/all_words";
 
 interface GameProps {
   difficulty: "normal" | "hard" | "practice";
@@ -68,6 +69,13 @@ export default function Game({ difficulty }: GameProps) {
       }
       makeGuess({ type: "letter", value: guess });
     } else {
+      if (guess.length < 4) {
+        showToast(`Words are at least 4 letters`);
+        return;
+      } else if (!isValidWord(guess)) {
+        showToast(`Not in the word list`);
+        return;
+      }
       makeGuess({ type: "word", value: guess });
     }
 
@@ -193,7 +201,7 @@ export default function Game({ difficulty }: GameProps) {
 
                 {/* Guesses and button row */}
                 <div className="flex items-center justify-between">
-                  <div className="flex-1 flex justify-start">
+                  <div className="flex-1 flex justify-start pl-1">
                     <GameStats gameState={gameState} grid={grid} />
                   </div>
                   <button
