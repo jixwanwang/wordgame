@@ -3,25 +3,16 @@
 
 export type GridCell = string;
 export type GridRow = [
-    GridCell,
-    GridCell,
-    GridCell,
-    GridCell,
-    GridCell,
-    GridCell,
-    GridCell,
-    GridCell,
+  GridCell,
+  GridCell,
+  GridCell,
+  GridCell,
+  GridCell,
+  GridCell,
+  GridCell,
+  GridCell,
 ];
-export type GameGrid = [
-  GridRow,
-  GridRow,
-  GridRow,
-  GridRow,
-  GridRow,
-  GridRow,
-  GridRow,
-  GridRow
-];
+export type GameGrid = [GridRow, GridRow, GridRow, GridRow, GridRow, GridRow, GridRow, GridRow];
 
 export interface Puzzle {
   date: string;
