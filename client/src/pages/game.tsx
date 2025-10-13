@@ -136,7 +136,7 @@ export default function Game({ difficulty }: GameProps) {
   }, [handleGuess, handleBackspaceClick, gameState.gameStatus, showToast]);
 
   if (currentPuzzle == null) {
-    return <div>SOMETHING WENT REALLY WRONG</div>;
+    return null;
   }
   const puzzleNumber = getGameNumber(currentPuzzle.date);
 
