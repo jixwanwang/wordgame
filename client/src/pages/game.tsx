@@ -56,6 +56,8 @@ export default function Game({ difficulty }: GameProps) {
     }, 1500);
   }, []);
 
+  const revealedCount = grid.getRevealedCount();
+
   const handleGuess = useCallback(() => {
     if (gameState.gameStatus !== "playing") return;
 
@@ -69,6 +71,11 @@ export default function Game({ difficulty }: GameProps) {
       }
       makeGuess({ type: "letter", value: guess });
     } else {
+      // without any revealed letters, we shouldn't allow guessing any words
+      if (gameState.guessedLetters.length === 0 || revealedCount === 0) {
+        showToast("Guess a letter first!");
+        return;
+      }
       if (guess.length < 4) {
         showToast(`Words are at least 4 letters`);
         return;
@@ -80,7 +87,14 @@ export default function Game({ difficulty }: GameProps) {
     }
 
     setInputValue("");
-  }, [inputValue, gameState.guessedLetters, makeGuess, showToast, gameState.gameStatus]);
+  }, [
+    inputValue,
+    gameState.guessedLetters,
+    makeGuess,
+    showToast,
+    gameState.gameStatus,
+    revealedCount,
+  ]);
 
   const handleLetterClick = useCallback(
     (letter: string) => {
