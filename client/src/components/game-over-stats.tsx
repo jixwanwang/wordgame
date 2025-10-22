@@ -17,11 +17,11 @@ export function GameOverStats({
   puzzleNumber,
 }: GameOverStatsProps) {
   const [copied, setCopied] = useState(false);
+  const currentStreak = getCurrentStreak();
 
   const shareText = () => {
-    const currentStreakText = getCurrentStreak();
     return won
-      ? `Crosses#${puzzleNumber} - ${totalLettersRevealed}/${numGuesses} 🔥${currentStreakText}`
+      ? `Crosses#${puzzleNumber} - ${totalLettersRevealed}/${numGuesses} 🔥${currentStreak}`
       : `Crosses#${puzzleNumber} - ${totalLettersRevealed}/${numGuesses}`;
   };
 
@@ -40,7 +40,7 @@ export function GameOverStats({
       {won ? (
         <div className="text-center">
           <p className="text-lg font-semibold text-gray-800 mb-1">
-            Current Streak: 🔥{getCurrentStreak()}
+            Current Streak: 🔥{currentStreak}
           </p>
           <p className="text-md text-gray-800 text-center">
             Come back tomorrow to continue your streak!

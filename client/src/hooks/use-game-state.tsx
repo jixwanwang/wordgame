@@ -3,7 +3,7 @@ import { GameState, Guess } from "@shared/schema";
 import { Grid8x8 } from "@shared/lib/grid";
 import { NUM_GUESSES } from "@shared/lib/game-utils";
 import { getPuzzlesByDifficulty, type Puzzle } from "@shared/lib/puzzles";
-import { saveGameState, getGameStateForDate } from "@/lib/game-storage";
+import { getGameForDay, addGuess, completeGame, getCurrentStreak } from "@/lib/game-storage";
 
 function getTodaysPuzzle(difficulty: "normal" | "hard"): Puzzle {
   const now = new Date();
@@ -45,6 +45,7 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
     guessedLetters: [],
     currentPuzzle: "",
     difficulty: difficulty,
+    currentStreak: 0,
   });
 
   // Load puzzle data from client-side
@@ -75,71 +76,52 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
         guessedLetters: [],
         currentPuzzle: puzzle.date,
         difficulty: difficulty,
+        currentStreak: 0,
       });
     } else {
       // Check for saved game state
-      const savedState = getGameStateForDate(puzzle.date);
+      const savedState = getGameForDay(puzzle.date);
+      const currentStreak = getCurrentStreak();
 
-      if (savedState) {
-        // Restore saved state
-        setGameState({
-          totalGuessesRemaining: savedState.guessesRemaining,
-          gameStatus: savedState.isComplete ? (savedState.wonGame ? "won" : "lost") : "playing",
-          guessedLetters: savedState.guessedLetters,
-          currentPuzzle: puzzle.date,
-          difficulty: difficulty,
-        });
+      // Restore saved state
+      setGameState({
+        totalGuessesRemaining: savedState.guessesRemaining,
+        gameStatus: savedState.isComplete ? (savedState.wonGame ? "won" : "lost") : "playing",
+        guessedLetters: savedState.guessedLetters,
+        currentPuzzle: puzzle.date,
+        difficulty,
+        currentStreak: currentStreak,
+      });
 
-        // Restore revealed letters in grid
-        savedState.guessedLetters.forEach((letter) => {
-          grid.revealLetter(letter);
-        });
-      } else {
-        // New game, start fresh
-        setGameState({
-          totalGuessesRemaining: NUM_GUESSES,
-          gameStatus: "playing",
-          guessedLetters: [],
-          currentPuzzle: puzzle.date,
-          difficulty: difficulty,
-        });
-      }
-    }
-  }, [grid, difficulty]);
-
-  // Save game state to local storage whenever it changes (skip practice mode)
-  useEffect(() => {
-    if (gameState.currentPuzzle && currentPuzzle && difficulty !== "practice") {
-      const isComplete = gameState.gameStatus === "won" || gameState.gameStatus === "lost";
-      const wonGame = gameState.gameStatus === "won";
-
-      saveGameState({
-        date: gameState.currentPuzzle,
-        guessesRemaining: gameState.totalGuessesRemaining,
-        guessedLetters: gameState.guessedLetters,
-        isComplete,
-        wonGame,
+      // Restore revealed letters in grid
+      savedState.guessedLetters.forEach((letter) => {
+        grid.revealLetter(letter);
       });
     }
-  }, [gameState, currentPuzzle, difficulty]);
+  }, [grid, difficulty]);
 
   const makeGuess = useCallback(
     (guess: Guess) => {
       if (gameState.gameStatus !== "playing" || gameState.totalGuessesRemaining <= 0) return;
+      if (!currentPuzzle) return;
+
+      const isPracticeMode = difficulty === "practice";
+      let newGuessedLetters: string[] = [];
 
       setGameState((prevState) => {
         const newState = { ...prevState };
-
-        if (!currentPuzzle) return prevState;
 
         if (guess.type === "letter") {
           const letter = guess.value.toUpperCase();
 
           // Don't process if already guessed this letter
           if (newState.guessedLetters.includes(letter)) return prevState;
+          // game's over, no more guessing
+          if (prevState.gameStatus === "won" || prevState.gameStatus === "lost") return prevState;
 
           newState.guessedLetters = [...newState.guessedLetters, letter];
           newState.totalGuessesRemaining -= 1;
+          newGuessedLetters = [letter];
 
           // Reveal letter in grid
           grid.revealLetter(letter);
@@ -153,6 +135,7 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
             wordLetters.forEach((letter) => {
               if (!newState.guessedLetters.includes(letter)) {
                 newState.guessedLetters = [...newState.guessedLetters, letter];
+                newGuessedLetters.push(letter);
               }
             });
 
@@ -172,10 +155,21 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
           newState.gameStatus = "lost";
         }
 
+        // Persist to storage layer if not in practice mode
+        if (!isPracticeMode && currentPuzzle.date) {
+          const isNowComplete = newState.gameStatus === "won" || newState.gameStatus === "lost";
+
+          addGuess(currentPuzzle.date, newGuessedLetters, newState.totalGuessesRemaining);
+          if (isNowComplete) {
+            const updatedStreak = completeGame(currentPuzzle.date, newState.gameStatus === "won");
+            newState.currentStreak = updatedStreak;
+          }
+        }
+
         return newState;
       });
     },
-    [gameState.gameStatus, gameState.totalGuessesRemaining, grid, currentPuzzle],
+    [gameState.gameStatus, gameState.totalGuessesRemaining, grid, currentPuzzle, difficulty],
   );
 
   const resetGame = useCallback(() => {
@@ -193,6 +187,7 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
       guessedLetters: [],
       currentPuzzle: "",
       difficulty: difficulty,
+      currentStreak: 0,
     });
 
     const puzzle = getRandomPracticePuzzle();

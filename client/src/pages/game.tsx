@@ -13,6 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { isValidWord } from "@shared/lib/all_words";
 
+// separate the storage layer with a proper api for actions rather than whole state updates
+// use the error popup for tutorial. start with guess a letter (and give a suggestion that will guarantee multiple)
+// prompt users to guess a word if they get close to a word (2 letters off), like g_ar_ or something
+
 interface GameProps {
   difficulty: "normal" | "hard" | "practice";
 }

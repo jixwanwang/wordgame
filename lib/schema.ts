@@ -14,6 +14,7 @@ export interface GameState {
   guessedLetters: string[];
   currentPuzzle: string;
   difficulty: "normal" | "hard" | "practice";
+  currentStreak: number;
 }
 
 export interface SavedGameState {
