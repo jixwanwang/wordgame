@@ -1,4 +1,4 @@
-import { getRandomWordsWithLengths, getUncommonRandomWordsWithLengths } from "./dictionary";
+import { getRandomWord } from "./lib/dictionary";
 import Grid8x8 from "./lib/grid";
 import { Difficulty, Puzzle } from "./lib/puzzles_types";
 import { validate_puzzle } from "./test_puzzle";
@@ -101,10 +101,10 @@ function placeWord(
 export function generate_puzzle_internal(difficulty: Difficulty): Puzzle | null {
   const words =
     difficulty === "practice"
-      ? getRandomWordsWithLengths([4, 4, 4])
+      ? [getRandomWord(4), getRandomWord(4), getRandomWord(4)]
       : difficulty === "normal"
-        ? getRandomWordsWithLengths([6, 5, 5, 4])
-        : getUncommonRandomWordsWithLengths([7, 6, 6, 5]);
+        ? [getRandomWord(6), getRandomWord(5), getRandomWord(5), getRandomWord(4)]
+        : [getRandomWord(7), getRandomWord(6), getRandomWord(6), getRandomWord(5)];
 
   const letterCounts = {};
   let overlapCount = 0;
@@ -118,8 +118,13 @@ export function generate_puzzle_internal(difficulty: Difficulty): Puzzle | null 
     });
   });
 
-  const minOverlapCount = difficulty === "normal" ? 2 : 3;
+  const minOverlapCount = 3;
   if (overlapCount < minOverlapCount) {
+    return null;
+  }
+
+  // Check that total unique letters is 13 or less
+  if (Object.keys(letterCounts).length > 13) {
     return null;
   }
 
@@ -271,4 +276,4 @@ export default PUZZLES;
 }
 
 // console.log(UNCOMMON_DICTIONARY[4].length, UNCOMMON_DICTIONARY[5].length, UNCOMMON_DICTIONARY[6].length, UNCOMMON_DICTIONARY[7].length);
-generatePuzzlesForDateRange("10-08-2025", "practice", 5);
+generatePuzzlesForDateRange("10-28-2025", "normal", 100);
