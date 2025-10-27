@@ -31,7 +31,15 @@ function getRandomPracticePuzzle(): Puzzle {
   return availablePuzzles[randomIndex];
 }
 
-export function useGameState(difficulty: "normal" | "hard" | "practice" = "normal") {
+function getRandomCrosswordPuzzle(): Puzzle {
+  const availablePuzzles = getPuzzlesByDifficulty("crossword");
+  const randomIndex = Math.floor(Math.random() * availablePuzzles.length);
+  return availablePuzzles[randomIndex];
+}
+
+export function useGameState(
+  difficulty: "normal" | "hard" | "practice" | "crossword" = "normal",
+) {
   // Initialize grid
   const grid = useMemo(() => new Grid8x8(), []);
 
@@ -54,7 +62,12 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
     grid.clear();
 
     const isPracticeMode = difficulty === "practice";
-    const puzzle = isPracticeMode ? getRandomPracticePuzzle() : getTodaysPuzzle(difficulty);
+    const isCrosswordMode = difficulty === "crossword";
+    const puzzle = isPracticeMode
+      ? getRandomPracticePuzzle()
+      : isCrosswordMode
+        ? getRandomCrosswordPuzzle()
+        : getTodaysPuzzle(difficulty);
 
     // Guard against missing puzzle date
     if (!puzzle.date) {
@@ -67,9 +80,9 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
     // Load puzzle into grid
     grid.loadPuzzle(puzzle);
 
-    // For practice mode, skip saved state; for normal/hard, check for saved state
-    if (isPracticeMode) {
-      // Practice mode - always start fresh
+    // For practice/crossword mode, skip saved state; for normal/hard, check for saved state
+    if (isPracticeMode || isCrosswordMode) {
+      // Practice/Crossword mode - always start fresh
       setGameState({
         totalGuessesRemaining: NUM_GUESSES,
         gameStatus: "playing",
@@ -106,6 +119,7 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
       if (!currentPuzzle) return;
 
       const isPracticeMode = difficulty === "practice";
+      const isCrosswordMode = difficulty === "crossword";
       let newGuessedLetters: string[] = [];
 
       setGameState((prevState) => {
@@ -155,8 +169,8 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
           newState.gameStatus = "lost";
         }
 
-        // Persist to storage layer if not in practice mode
-        if (!isPracticeMode && currentPuzzle.date) {
+        // Persist to storage layer if not in practice or crossword mode
+        if (!isPracticeMode && !isCrosswordMode && currentPuzzle.date) {
           const isNowComplete = newState.gameStatus === "won" || newState.gameStatus === "lost";
 
           addGuess(currentPuzzle.date, newGuessedLetters, newState.totalGuessesRemaining);
@@ -174,8 +188,9 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
 
   const resetGame = useCallback(() => {
     const isPracticeMode = difficulty === "practice";
-    // we only allow resetting the game in practice mode
-    if (!isPracticeMode) return;
+    const isCrosswordMode = difficulty === "crossword";
+    // we only allow resetting the game in practice or crossword mode
+    if (!isPracticeMode && !isCrosswordMode) return;
 
     // Clear the grid
     grid.clear();

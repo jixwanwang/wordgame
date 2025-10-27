@@ -3,7 +3,6 @@ import { Puzzle } from "./lib/puzzles_types";
 import { ABBREVIATIONS } from "./lib/abbreviations";
 import { VALID_WORDS } from "./lib/valid_words";
 import { BLACKOUT_PATTERNS, BlackoutPattern } from "./blackouts";
-import { formatPuzzleOutput } from "./gen_puzzle";
 
 // Global word map organized by length for fast lookup
 // Combines scrabble words and abbreviations
@@ -53,13 +52,12 @@ export function getRandomWordOfLength(length: number): string | null {
   return words.length > 0 ? words[Math.floor(Math.random() * words.length)] : null;
 }
 
-// Helper function to get all words with specific letter constraints
-// constraints: { [index: number]: string } - e.g., { 0: 'A', 2: 'T' } means position 0 must be 'A', position 2 must be 'T'
-export function getWordsWithConstraints(
-  length: number,
+// Helper function to filter a list of words by constraints
+// This is useful for narrowing down cached word lists
+export function filterWordsByConstraints(
+  words: string[],
   constraints: { [index: number]: string },
 ): string[] {
-  const words = getWordsByLength(length);
   if (words.length === 0) return [];
 
   // Filter words that match all constraints
@@ -74,6 +72,16 @@ export function getWordsWithConstraints(
   });
 
   return matchingWords;
+}
+
+// Helper function to get all words with specific letter constraints
+// constraints: { [index: number]: string } - e.g., { 0: 'A', 2: 'T' } means position 0 must be 'A', position 2 must be 'T'
+export function getWordsWithConstraints(
+  length: number,
+  constraints: { [index: number]: string },
+): string[] {
+  const words = getWordsByLength(length);
+  return filterWordsByConstraints(words, constraints);
 }
 
 // Helper function to get a random word with specific letter constraints
@@ -221,10 +229,46 @@ function placeVerticalWord(
   return word;
 }
 
+// Helper function to extract all words from a completed grid
+function extractWordsFromGrid(grid: Grid5x5, blackout: BlackoutPattern): string[] {
+  const words: Set<string> = new Set();
+
+  // Extract horizontal words
+  for (let row = 0; row < 5; row++) {
+    const startCol = findFirstNonBlackoutInRow(row, blackout);
+    if (startCol !== -1) {
+      const length = getHorizontalWordLength(row, startCol, blackout);
+      if (length > 1) {
+        let word = "";
+        for (let col = startCol; col < startCol + length; col++) {
+          word += grid.getCell(row, col);
+        }
+        words.add(word);
+      }
+    }
+  }
+
+  // Extract vertical words
+  for (let col = 0; col < 5; col++) {
+    const startRow = findFirstNonBlackoutInCol(col, blackout);
+    if (startRow !== -1) {
+      const length = getVerticalWordLength(startRow, col, blackout);
+      if (length > 1) {
+        let word = "";
+        for (let row = startRow; row < startRow + length; row++) {
+          word += grid.getCell(row, col);
+        }
+        words.add(word);
+      }
+    }
+  }
+
+  return Array.from(words);
+}
+
 // Generate a 5x5 crossword puzzle
 export function generateCrossword5x5(blackout: BlackoutPattern): Puzzle | null {
   const grid = new Grid5x5();
-  const wordPositions: Record<string, [number, number][]> = {};
 
   // Step 1: Fill in the edges
 
@@ -235,7 +279,6 @@ export function generateCrossword5x5(blackout: BlackoutPattern): Puzzle | null {
     if (topLength > 0) {
       const topWord = placeHorizontalWord(grid, 0, topStartCol, topLength);
       if (!topWord) return null;
-      wordPositions[topWord] = Array.from({ length: topLength }, (_, i) => [0, topStartCol + i]);
     }
   }
 
@@ -246,7 +289,6 @@ export function generateCrossword5x5(blackout: BlackoutPattern): Puzzle | null {
     if (leftLength > 0) {
       const leftWord = placeVerticalWord(grid, leftStartRow, 0, leftLength);
       if (!leftWord) return null;
-      wordPositions[leftWord] = Array.from({ length: leftLength }, (_, i) => [leftStartRow + i, 0]);
     }
   }
 
@@ -257,10 +299,6 @@ export function generateCrossword5x5(blackout: BlackoutPattern): Puzzle | null {
     if (bottomLength > 0) {
       const bottomWord = placeHorizontalWord(grid, 4, bottomStartCol, bottomLength);
       if (!bottomWord) return null;
-      wordPositions[bottomWord] = Array.from({ length: bottomLength }, (_, i) => [
-        4,
-        bottomStartCol + i,
-      ]);
     }
   }
 
@@ -271,10 +309,28 @@ export function generateCrossword5x5(blackout: BlackoutPattern): Puzzle | null {
     if (rightLength > 0) {
       const rightWord = placeVerticalWord(grid, rightStartRow, 4, rightLength);
       if (!rightWord) return null;
-      wordPositions[rightWord] = Array.from({ length: rightLength }, (_, i) => [
-        rightStartRow + i,
-        4,
-      ]);
+    }
+  }
+
+  // Initialize cached possible words for columns 1, 2, 3
+  // These will be updated as we place each row
+  const columnWordCache: Map<number, string[]> = new Map();
+
+  // Initialize the cache with all possible words for each column based on current grid state
+  for (let col = 1; col <= 3; col++) {
+    if (!isBlackedOut(1, col, blackout)) {
+      const colStartRow = findFirstNonBlackoutInCol(col, blackout);
+      if (colStartRow !== -1) {
+        const colLength = getVerticalWordLength(colStartRow, col, blackout);
+        if (colLength > 1) {
+          const colConstraints = getVerticalConstraints(grid, colStartRow, col, colLength);
+          const possibleWords = getWordsWithConstraints(colLength, colConstraints);
+          if (possibleWords.length === 0) {
+            return null;
+          }
+          columnWordCache.set(col, possibleWords);
+        }
+      }
     }
   }
 
@@ -292,41 +348,45 @@ export function generateCrossword5x5(blackout: BlackoutPattern): Puzzle | null {
       // Try each candidate word
       let foundValidRow1 = false;
       for (const candidateWord of row1Candidates) {
-        // Temporarily place the word
+        // Temporarily place the word to check constraints
         const originalCells: string[] = [];
         for (let i = 0; i < candidateWord.length; i++) {
           originalCells.push(grid.getCell(1, row1StartCol + i) || "");
           grid.setCell(1, row1StartCol + i, candidateWord[i]);
         }
 
-        // Check if all affected columns (1, 2, 3) have valid words
+        // Check if this word is compatible with cached column words
         let allColumnsValid = true;
+        const updatedColumnCache: Map<number, string[]> = new Map();
+
         for (let col = 1; col <= 3; col++) {
           if (!isBlackedOut(1, col, blackout)) {
-            // Find the start of the vertical word for this column
-            const colStartRow = findFirstNonBlackoutInCol(col, blackout);
-            if (colStartRow !== -1) {
+            const cachedWords = columnWordCache.get(col);
+            if (cachedWords && cachedWords.length > 0) {
+              // Get ALL current constraints from the grid for this column
+              const colStartRow = findFirstNonBlackoutInCol(col, blackout);
               const colLength = getVerticalWordLength(colStartRow, col, blackout);
-              if (colLength > 1) {
-                // Only check if it's a word (length > 1)
-                const colConstraints = getVerticalConstraints(grid, colStartRow, col, colLength);
-                const colCandidates = getWordsWithConstraints(colLength, colConstraints);
+              const colConstraints = getVerticalConstraints(grid, colStartRow, col, colLength);
 
-                if (colCandidates.length === 0) {
-                  allColumnsValid = false;
-                  break;
-                }
+              // Filter cached words to match all current constraints
+              const filteredWords = filterWordsByConstraints(cachedWords, colConstraints);
+
+              if (filteredWords.length === 0) {
+                allColumnsValid = false;
+                break;
               }
+              updatedColumnCache.set(col, filteredWords);
             }
           }
         }
 
         if (allColumnsValid) {
-          // This word works! Keep it
-          wordPositions[candidateWord] = Array.from({ length: row1Length }, (_, i) => [
-            1,
-            row1StartCol + i,
-          ]);
+          // This word works! Keep it and update the cache
+          // Update the column cache with filtered words
+          for (const [col, filteredWords] of updatedColumnCache.entries()) {
+            columnWordCache.set(col, filteredWords);
+          }
+
           foundValidRow1 = true;
           break;
         } else {
@@ -361,41 +421,45 @@ export function generateCrossword5x5(blackout: BlackoutPattern): Puzzle | null {
       // Try each candidate word
       let foundValidRow2 = false;
       for (const candidateWord of row2Candidates) {
-        // Temporarily place the word
+        // Temporarily place the word to check constraints
         const originalCells: string[] = [];
         for (let i = 0; i < candidateWord.length; i++) {
           originalCells.push(grid.getCell(2, row2StartCol + i) || "");
           grid.setCell(2, row2StartCol + i, candidateWord[i]);
         }
 
-        // Check if all affected columns (1, 2, 3) have valid words
+        // Check if this word is compatible with cached column words
         let allColumnsValid = true;
+        const updatedColumnCache: Map<number, string[]> = new Map();
+
         for (let col = 1; col <= 3; col++) {
           if (!isBlackedOut(2, col, blackout)) {
-            // Find the start of the vertical word for this column
-            const colStartRow = findFirstNonBlackoutInCol(col, blackout);
-            if (colStartRow !== -1) {
+            const cachedWords = columnWordCache.get(col);
+            if (cachedWords && cachedWords.length > 0) {
+              // Get ALL current constraints from the grid for this column
+              const colStartRow = findFirstNonBlackoutInCol(col, blackout);
               const colLength = getVerticalWordLength(colStartRow, col, blackout);
-              if (colLength > 1) {
-                // Only check if it's a word (length > 1)
-                const colConstraints = getVerticalConstraints(grid, colStartRow, col, colLength);
-                const colCandidates = getWordsWithConstraints(colLength, colConstraints);
+              const colConstraints = getVerticalConstraints(grid, colStartRow, col, colLength);
 
-                if (colCandidates.length === 0) {
-                  allColumnsValid = false;
-                  break;
-                }
+              // Filter cached words to match all current constraints
+              const filteredWords = filterWordsByConstraints(cachedWords, colConstraints);
+
+              if (filteredWords.length === 0) {
+                allColumnsValid = false;
+                break;
               }
+              updatedColumnCache.set(col, filteredWords);
             }
           }
         }
 
         if (allColumnsValid) {
-          // This word works! Keep it
-          wordPositions[candidateWord] = Array.from({ length: row2Length }, (_, i) => [
-            2,
-            row2StartCol + i,
-          ]);
+          // This word works! Keep it and update the cache
+          // Update the column cache with filtered words
+          for (const [col, filteredWords] of updatedColumnCache.entries()) {
+            columnWordCache.set(col, filteredWords);
+          }
+
           foundValidRow2 = true;
           break;
         } else {
@@ -430,41 +494,45 @@ export function generateCrossword5x5(blackout: BlackoutPattern): Puzzle | null {
       // Try each candidate word
       let foundValidRow3 = false;
       for (const candidateWord of row3Candidates) {
-        // Temporarily place the word
+        // Temporarily place the word to check constraints
         const originalCells: string[] = [];
         for (let i = 0; i < candidateWord.length; i++) {
           originalCells.push(grid.getCell(3, row3StartCol + i) || "");
           grid.setCell(3, row3StartCol + i, candidateWord[i]);
         }
 
-        // Check if all affected columns (1, 2, 3) have valid words
+        // Check if this word is compatible with cached column words
         let allColumnsValid = true;
+        const updatedColumnCache: Map<number, string[]> = new Map();
+
         for (let col = 1; col <= 3; col++) {
           if (!isBlackedOut(3, col, blackout)) {
-            // Find the start of the vertical word for this column
-            const colStartRow = findFirstNonBlackoutInCol(col, blackout);
-            if (colStartRow !== -1) {
+            const cachedWords = columnWordCache.get(col);
+            if (cachedWords && cachedWords.length > 0) {
+              // Get ALL current constraints from the grid for this column
+              const colStartRow = findFirstNonBlackoutInCol(col, blackout);
               const colLength = getVerticalWordLength(colStartRow, col, blackout);
-              if (colLength > 1) {
-                // Only check if it's a word (length > 1)
-                const colConstraints = getVerticalConstraints(grid, colStartRow, col, colLength);
-                const colCandidates = getWordsWithConstraints(colLength, colConstraints);
+              const colConstraints = getVerticalConstraints(grid, colStartRow, col, colLength);
 
-                if (colCandidates.length === 0) {
-                  allColumnsValid = false;
-                  break;
-                }
+              // Filter cached words to match all current constraints
+              const filteredWords = filterWordsByConstraints(cachedWords, colConstraints);
+
+              if (filteredWords.length === 0) {
+                allColumnsValid = false;
+                break;
               }
+              updatedColumnCache.set(col, filteredWords);
             }
           }
         }
 
         if (allColumnsValid) {
-          // This word works! Keep it
-          wordPositions[candidateWord] = Array.from({ length: row3Length }, (_, i) => [
-            3,
-            row3StartCol + i,
-          ]);
+          // This word works! Keep it and update the cache
+          // Update the column cache with filtered words
+          for (const [col, filteredWords] of updatedColumnCache.entries()) {
+            columnWordCache.set(col, filteredWords);
+          }
+
           foundValidRow3 = true;
           break;
         } else {
@@ -485,11 +553,39 @@ export function generateCrossword5x5(blackout: BlackoutPattern): Puzzle | null {
     }
   }
 
+  // // Step 5: Place the vertical words from the cache
+  // for (let col = 1; col <= 3; col++) {
+  //   const cachedWords = columnWordCache.get(col);
+  //   if (cachedWords && cachedWords.length > 0) {
+  //     // Pick the first valid word (they should all work at this point)
+  //     const selectedWord = cachedWords[Math.floor(Math.random() * cachedWords.length)];
+  //     const colStartRow = findFirstNonBlackoutInCol(col, blackout);
+  //     if (colStartRow !== -1) {
+  //       const colLength = getVerticalWordLength(colStartRow, col, blackout);
+
+  //       // Place the word
+  //       for (let i = 0; i < selectedWord.length; i++) {
+  //         grid.setCell(colStartRow + i, col, selectedWord[i]);
+  //       }
+
+  //       wordPositions[selectedWord] = Array.from({ length: colLength }, (_, i) => [
+  //         colStartRow + i,
+  //         col,
+  //       ]);
+  //     }
+  //   }
+  // }
+
+  // Extract all words from the completed grid
+  const words = extractWordsFromGrid(grid, blackout);
+
+  const currentDate = new Date();
+  const formattedDate = `${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(currentDate.getDate()).padStart(2, "0")}-${currentDate.getFullYear()}`;
   const puzzle = {
-    date: `${Date.now()}`,
-    words: Object.keys(wordPositions),
+    date: formattedDate,
+    words: words,
     grid: grid.convertToGameGrid(),
-    wordPositions: wordPositions,
+    wordPositions: {},
   };
 
   return puzzle;
@@ -517,6 +613,21 @@ export function generateCrossword5x5WithRetry(
 // Test generation with different patterns
 console.log("Testing crossword generation...\n");
 
+function formatPuzzleOutput(puzzle: Puzzle): string {
+  const gridLines = puzzle.grid
+    .map((row) => `            [${row.map((cell) => `"${cell}"`).join(", ")}]`)
+    .join(",\n");
+
+  return `    {
+        "date": "${puzzle.date}",
+        "words": [${puzzle.words.map((w) => `"${w}"`).join(", ")}],
+        "grid": [
+${gridLines},
+        ],
+        "wordPositions": {},
+    }`;
+}
+
 const testPuzzle = generateCrossword5x5WithRetry();
 if (testPuzzle) {
   console.log;
@@ -542,4 +653,57 @@ S A R D ·
 
 === Words ===
 LAG, APES, SARD, GOOD, ALAMO, PASEO, EMEND
+
+
+{
+        "date": "1761526849124",
+        "words": ["CREDO", "COP", "SEA", "ODE", "OARED", "PROLE", "EST", "RARES", "EROSE", "DELTA"],
+        "grid": [
+            ["C", "R", "E", "D", "O"],
+            ["O", "A", "R", "E", "D"],
+            ["P", "R", "O", "L", "E"],
+            [" ", "E", "S", "T", " "],
+            [" ", "S", "E", "A", " "],
+        ],
+        "wordPositions": {},
+    }
+
+        {
+        "date": "1761527165635",
+        "words": ["APPLE", "CILIA", "ENACT", "DESKS", "SMS", "ACED", "PINES", "PLASM", "LICKS", "EATS"],
+        "grid": [
+            ["A", "P", "P", "L", "E"],
+            ["C", "I", "L", "I", "A"],
+            ["E", "N", "A", "C", "T"],
+            ["D", "E", "S", "K", "S"],
+            [" ", "S", "M", "S", " "],
+        ],
+        "wordPositions": { },
+    }
+
+     {
+        "date": "1761527241645",
+        "words": ["TUSK", "UDON", "SONIC", "KNIFE", "CEO"],
+        "grid": [
+            ["T", "U", "S", "K", " "],
+            ["U", "D", "O", "N", " "],
+            ["S", "O", "N", "I", "C"],
+            ["K", "N", "I", "F", "E"],
+            [" ", " ", "C", "E", "O"],
+        ],
+        "wordPositions": {},
+    }
+
+    {
+        "date": "1761527472300",
+        "words": ["SOT", "CHAI", "PHASE", "EARED", "APES", "PEA", "CHAP", "SHARE", "OASES", "TIED"],
+        "grid": [
+            [" ", " ", "S", "O", "T"],
+            [" ", "C", "H", "A", "I"],
+            ["P", "H", "A", "S", "E"],
+            ["E", "A", "R", "E", "D"],
+            ["A", "P", "E", "S", " "],
+        ],
+        "wordPositions": {},
+    }
 */

@@ -27,11 +27,11 @@ export abstract class BaseGrid {
 
     for (let row = 0; row < this.size; row++) {
       if (puzzle.grid.length - 1 < row) {
-        return;
+        break;
       }
       for (let col = 0; col < this.size; col++) {
-        if (puzzle.grid[row].length - 1 < row) {
-          return;
+        if (puzzle.grid[row].length - 1 < col) {
+          break;
         }
         const letter = puzzle.grid[row][col];
         if (letter && letter !== " ") {

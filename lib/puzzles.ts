@@ -4,6 +4,7 @@
 import normalPuzzles from "./puzzles_normal";
 import hardPuzzles from "./puzzles_hard";
 import practicePuzzles from "./puzzles_practice";
+import crosswordPuzzles from "./puzzles_crossword";
 import type { Puzzle, Difficulty, PuzzleCollection } from "./puzzles_types";
 
 export type {
@@ -19,6 +20,7 @@ const puzzles: PuzzleCollection = {
   normal: normalPuzzles,
   hard: hardPuzzles,
   practice: practicePuzzles,
+  crossword: crosswordPuzzles,
 };
 
 // Helper function to get all puzzle names

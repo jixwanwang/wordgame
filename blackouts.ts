@@ -90,27 +90,12 @@ export const BLACKOUT_PATTERNS: Record<string, BlackoutPattern> = {
 
   // ===== TWO SQUARES IN ONE CORNER + VARIATIONS OF ANOTHER CORNER =====
 
-  // Top-left (2 horizontal) + Top-right (1)
-  topLeft2h_topRight1: [
-    [0, 0],
-    [0, 1],
-    [0, 4],
-  ],
-
   // Top-left (2 horizontal) + Top-right (2 horizontal)
   topLeft2h_topRight2h: [
     [0, 0],
     [0, 1],
     [0, 4],
     [0, 3],
-  ],
-
-  // Top-left (2 horizontal) + Top-right (2 vertical)
-  topLeft2h_topRight2v: [
-    [0, 0],
-    [0, 1],
-    [0, 4],
-    [1, 4],
   ],
 
   // Top-left (2 horizontal) + Bottom-left (1)
@@ -126,14 +111,6 @@ export const BLACKOUT_PATTERNS: Record<string, BlackoutPattern> = {
     [0, 1],
     [4, 0],
     [4, 1],
-  ],
-
-  // Top-left (2 horizontal) + Bottom-left (2 vertical)
-  topLeft2h_bottomLeft2v: [
-    [0, 0],
-    [0, 1],
-    [4, 0],
-    [3, 0],
   ],
 
   // Top-left (2 horizontal) + Bottom-right (1)
@@ -166,35 +143,12 @@ export const BLACKOUT_PATTERNS: Record<string, BlackoutPattern> = {
     [0, 4],
   ],
 
-  // Top-left (2 vertical) + Top-right (2 horizontal)
-  topLeft2v_topRight2h: [
-    [0, 0],
-    [1, 0],
-    [0, 4],
-    [0, 3],
-  ],
-
   // Top-left (2 vertical) + Top-right (2 vertical)
   topLeft2v_topRight2v: [
     [0, 0],
     [1, 0],
     [0, 4],
     [1, 4],
-  ],
-
-  // Top-left (2 vertical) + Bottom-left (1)
-  topLeft2v_bottomLeft1: [
-    [0, 0],
-    [1, 0],
-    [4, 0],
-  ],
-
-  // Top-left (2 vertical) + Bottom-left (2 horizontal)
-  topLeft2v_bottomLeft2h: [
-    [0, 0],
-    [1, 0],
-    [4, 0],
-    [4, 1],
   ],
 
   // Top-left (2 vertical) + Bottom-left (2 vertical)
@@ -266,14 +220,6 @@ export const BLACKOUT_PATTERNS: Record<string, BlackoutPattern> = {
     [4, 3],
   ],
 
-  // Top-right (2 horizontal) + Bottom-right (2 vertical)
-  topRight2h_bottomRight2v: [
-    [0, 4],
-    [0, 3],
-    [4, 4],
-    [3, 4],
-  ],
-
   // Top-right (2 vertical) + Bottom-left (1)
   topRight2v_bottomLeft1: [
     [0, 4],
@@ -297,34 +243,12 @@ export const BLACKOUT_PATTERNS: Record<string, BlackoutPattern> = {
     [3, 0],
   ],
 
-  // Top-right (2 vertical) + Bottom-right (1)
-  topRight2v_bottomRight1: [
-    [0, 4],
-    [1, 4],
-    [4, 4],
-  ],
-
-  // Top-right (2 vertical) + Bottom-right (2 horizontal)
-  topRight2v_bottomRight2h: [
-    [0, 4],
-    [1, 4],
-    [4, 4],
-    [4, 3],
-  ],
-
   // Top-right (2 vertical) + Bottom-right (2 vertical)
   topRight2v_bottomRight2v: [
     [0, 4],
     [1, 4],
     [4, 4],
     [3, 4],
-  ],
-
-  // Bottom-left (2 horizontal) + Bottom-right (1)
-  bottomLeft2h_bottomRight1: [
-    [4, 0],
-    [4, 1],
-    [4, 4],
   ],
 
   // Bottom-left (2 horizontal) + Bottom-right (2 horizontal)
@@ -335,27 +259,11 @@ export const BLACKOUT_PATTERNS: Record<string, BlackoutPattern> = {
     [4, 3],
   ],
 
-  // Bottom-left (2 horizontal) + Bottom-right (2 vertical)
-  bottomLeft2h_bottomRight2v: [
-    [4, 0],
-    [4, 1],
-    [4, 4],
-    [3, 4],
-  ],
-
   // Bottom-left (2 vertical) + Bottom-right (1)
   bottomLeft2v_bottomRight1: [
     [4, 0],
     [3, 0],
     [4, 4],
-  ],
-
-  // Bottom-left (2 vertical) + Bottom-right (2 horizontal)
-  bottomLeft2v_bottomRight2h: [
-    [4, 0],
-    [3, 0],
-    [4, 4],
-    [4, 3],
   ],
 
   // Bottom-left (2 vertical) + Bottom-right (2 vertical)

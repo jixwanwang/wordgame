@@ -10,6 +10,7 @@ function Router() {
       <Route path="/" component={() => <Game difficulty="normal" />} />
       <Route path="/hard" component={() => <Game difficulty="hard" />} />
       <Route path="/practice" component={() => <Game difficulty="practice" />} />
+      <Route path="/crossword" component={() => <Game difficulty="crossword" />} />
       <Route component={() => <Game difficulty="normal" />} />
     </Switch>
   );

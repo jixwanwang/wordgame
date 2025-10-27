@@ -12,10 +12,11 @@ export interface Puzzle {
   wordPositions: Record<string, [number, number][]>;
 }
 
-export type Difficulty = "normal" | "hard" | "practice";
+export type Difficulty = "normal" | "hard" | "practice" | "crossword";
 
 export interface PuzzleCollection {
   normal: Puzzle[];
   hard: Puzzle[];
   practice: Puzzle[];
+  crossword: Puzzle[];
 }

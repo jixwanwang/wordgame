@@ -4580,7 +4580,6 @@ export const VALID_WORDS = [
   "OILY",
   "OINK",
   "OINKS",
-  "OKAPI",
   "OKAY",
   "OKAYS",
   "OKRA",

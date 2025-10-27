@@ -18,7 +18,7 @@ import { isValidWord } from "@shared/lib/all_words";
 // prompt users to guess a word if they get close to a word (2 letters off), like g_ar_ or something
 
 interface GameProps {
-  difficulty: "normal" | "hard" | "practice";
+  difficulty: "normal" | "hard" | "practice" | "crossword";
 }
 
 export default function Game({ difficulty }: GameProps) {
@@ -204,6 +204,7 @@ export default function Game({ difficulty }: GameProps) {
             isLetterRevealed={isLetterRevealed}
             currentPuzzle={currentPuzzle}
             gameStatus={gameState.gameStatus}
+            difficulty={difficulty}
           />
         </div>
 
