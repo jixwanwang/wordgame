@@ -7,37 +7,32 @@ export type GridCell = string;
 export type GridMatrix = GridCell[][];
 export type RevealedMatrix = boolean[][];
 
-export class Grid8x8 {
-  private grid: GridMatrix;
-  private revealed: RevealedMatrix;
+export abstract class BaseGrid {
+  protected grid: GridMatrix;
+  protected revealed: RevealedMatrix;
+  protected size: number;
 
-  constructor() {
-    this.grid = Array(8)
+  constructor(size: number) {
+    this.size = size;
+    this.grid = Array(size)
       .fill(null)
-      .map(() => Array(8).fill(""));
-    this.revealed = Array(8)
+      .map(() => Array(size).fill(""));
+    this.revealed = Array(size)
       .fill(null)
-      .map(() => Array(8).fill(false));
-  }
-
-  static fromGrid(grid: Grid8x8) {
-    const newGrid = new Grid8x8();
-    for (let i = 0; i < 8; i++) {
-      for (let j = 0; j < 8; j++) {
-        const cell = grid.getCell(i, j);
-        if (cell != null) {
-          newGrid.setCell(i, j, cell);
-        }
-      }
-    }
-    return newGrid;
+      .map(() => Array(size).fill(false));
   }
 
   loadPuzzle(puzzle: Puzzle) {
     this.clear();
 
-    for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
+    for (let row = 0; row < this.size; row++) {
+      if (puzzle.grid.length - 1 < row) {
+        return;
+      }
+      for (let col = 0; col < this.size; col++) {
+        if (puzzle.grid[row].length - 1 < row) {
+          return;
+        }
         const letter = puzzle.grid[row][col];
         if (letter && letter !== " ") {
           this.setCell(row, col, letter);
@@ -62,16 +57,16 @@ export class Grid8x8 {
   }
 
   isValidPosition(row: number, col: number): boolean {
-    return row >= 0 && row < 8 && col >= 0 && col < 8;
+    return row >= 0 && row < this.size && col >= 0 && col < this.size;
   }
 
   clear(): void {
-    this.grid = Array(8)
+    this.grid = Array(this.size)
       .fill(null)
-      .map(() => Array(8).fill(""));
-    this.revealed = Array(8)
+      .map(() => Array(this.size).fill(""));
+    this.revealed = Array(this.size)
       .fill(null)
-      .map(() => Array(8).fill(false));
+      .map(() => Array(this.size).fill(false));
   }
 
   isRevealed(row: number, col: number): boolean {
@@ -85,8 +80,8 @@ export class Grid8x8 {
     if (!letter || letter === "") return 0;
 
     let count = 0;
-    for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
+    for (let row = 0; row < this.size; row++) {
+      for (let col = 0; col < this.size; col++) {
         if (this.grid[row][col].toLowerCase() === letter.toLowerCase()) {
           this.revealed[row][col] = true;
           count++;
@@ -112,28 +107,14 @@ export class Grid8x8 {
     return false;
   }
 
-  display(): void {
-    console.log("  0 1 2 3 4 5 6 7");
-    this.grid.forEach((row, i) => {
-      console.log(
-        `${i} ${row
-          .map((cell, j) => {
-            if (cell === "" || cell === " ") return ".";
-            return this.revealed[i][j] ? cell.toUpperCase() : "_";
-          })
-          .join(" ")}`,
-      );
-    });
-  }
-
   convertToGameGrid(): GameGrid {
     return this.grid.map((row) => row.map((value) => (value ? value : " "))) as GameGrid;
   }
 
   getRevealedCount(): number {
     let count = 0;
-    for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
+    for (let row = 0; row < this.size; row++) {
+      for (let col = 0; col < this.size; col++) {
         if (this.revealed[row][col] && this.grid[row][col] !== "" && this.grid[row][col] !== " ") {
           count++;
         }
@@ -144,8 +125,8 @@ export class Grid8x8 {
 
   getTotalLetters(): number {
     let count = 0;
-    for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
+    for (let row = 0; row < this.size; row++) {
+      for (let col = 0; col < this.size; col++) {
         if (this.grid[row][col] !== "" && this.grid[row][col] !== " ") {
           count++;
         }
@@ -156,8 +137,8 @@ export class Grid8x8 {
 
   getAllLetters(): string[] {
     const letters: string[] = [];
-    for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
+    for (let row = 0; row < this.size; row++) {
+      for (let col = 0; col < this.size; col++) {
         const cell = this.grid[row][col];
         if (cell !== "" && cell !== " ") {
           letters.push(cell.toUpperCase());
@@ -169,8 +150,8 @@ export class Grid8x8 {
 
   getRevealedLetters(): string[] {
     const letters: string[] = [];
-    for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
+    for (let row = 0; row < this.size; row++) {
+      for (let col = 0; col < this.size; col++) {
         if (this.revealed[row][col] && this.grid[row][col] !== "" && this.grid[row][col] !== " ") {
           letters.push(this.grid[row][col].toUpperCase());
         }
@@ -194,6 +175,10 @@ export class Grid8x8 {
     return this.revealed;
   }
 
+  getSize(): number {
+    return this.size;
+  }
+
   // Get the bounds of the populated grid area
   getPopulatedBounds(): {
     minRow: number;
@@ -201,13 +186,13 @@ export class Grid8x8 {
     minCol: number;
     maxCol: number;
   } {
-    let minRow = 8,
+    let minRow = this.size,
       maxRow = -1,
-      minCol = 8,
+      minCol = this.size,
       maxCol = -1;
 
-    for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
+    for (let row = 0; row < this.size; row++) {
+      for (let col = 0; col < this.size; col++) {
         if (this.grid[row][col] !== "" && this.grid[row][col] !== " ") {
           minRow = Math.min(minRow, row);
           maxRow = Math.max(maxRow, row);
@@ -219,10 +204,48 @@ export class Grid8x8 {
 
     // If no letters found, return default bounds
     if (minRow > maxRow) {
-      return { minRow: 0, maxRow: 7, minCol: 0, maxCol: 7 };
+      return { minRow: 0, maxRow: this.size - 1, minCol: 0, maxCol: this.size - 1 };
     }
 
     return { minRow, maxRow, minCol, maxCol };
+  }
+}
+
+export class Grid8x8 extends BaseGrid {
+  constructor() {
+    super(8);
+  }
+
+  static fromGrid(grid: Grid8x8) {
+    const newGrid = new Grid8x8();
+    for (let i = 0; i < 8; i++) {
+      for (let j = 0; j < 8; j++) {
+        const cell = grid.getCell(i, j);
+        if (cell != null) {
+          newGrid.setCell(i, j, cell);
+        }
+      }
+    }
+    return newGrid;
+  }
+}
+
+export class Grid5x5 extends BaseGrid {
+  constructor() {
+    super(5);
+  }
+
+  static fromGrid(grid: Grid5x5) {
+    const newGrid = new Grid5x5();
+    for (let i = 0; i < 5; i++) {
+      for (let j = 0; j < 5; j++) {
+        const cell = grid.getCell(i, j);
+        if (cell != null) {
+          newGrid.setCell(i, j, cell);
+        }
+      }
+    }
+    return newGrid;
   }
 }
 

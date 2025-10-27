@@ -2,17 +2,8 @@
 // IT IS CRITICAL THAT THIS FILE NOT CHANGE OR ELSE THINGS WILL BREAK AND MY GRANDMA WILL BE KILLED
 
 export type GridCell = string;
-export type GridRow = [
-  GridCell,
-  GridCell,
-  GridCell,
-  GridCell,
-  GridCell,
-  GridCell,
-  GridCell,
-  GridCell,
-];
-export type GameGrid = [GridRow, GridRow, GridRow, GridRow, GridRow, GridRow, GridRow, GridRow];
+export type GridRow = Array<GridCell>;
+export type GameGrid = Array<GridRow>;
 
 export interface Puzzle {
   date: string;
