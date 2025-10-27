@@ -8,6 +8,7 @@ interface CrosswordGridProps {
   isLetterRevealed: (row: number, col: number) => boolean;
   currentPuzzle: Puzzle | undefined;
   gameStatus: "playing" | "won" | "lost";
+  difficulty?: "normal" | "hard" | "practice" | "crossword";
 }
 
 export function CrosswordGrid({
@@ -15,6 +16,7 @@ export function CrosswordGrid({
   isLetterRevealed,
   currentPuzzle,
   gameStatus,
+  difficulty,
 }: CrosswordGridProps) {
   // Get smart bounds to only render populated areas
   const bounds = grid.getPopulatedBounds();
@@ -168,8 +170,19 @@ export function CrosswordGrid({
     const key = `${row}-${col}`;
     const letter = grid.getCell(row, col);
 
-    // If cell is empty or just spaces, make it invisible but maintain grid structure
+    // If cell is empty or just spaces
     if (!letter || letter === " ") {
+      // In crossword mode, render black squares for empty cells
+      if (difficulty === "crossword") {
+        return (
+          <div
+            key={key}
+            className="w-8 h-8 sm:w-10 sm:h-10 bg-black border-2 border-gray-800"
+            data-testid={`grid-cell-${row}-${col}`}
+          />
+        );
+      }
+      // Otherwise make it invisible but maintain grid structure
       return <div key={key} className="w-8 h-8 sm:w-10 sm:h-10 invisible" />;
     }
 
@@ -186,6 +199,8 @@ export function CrosswordGrid({
 
     // Render arrows for this cell
     const renderArrows = () => {
+      // Don't render arrows for crossword difficulty
+      if (difficulty === "crossword") return null;
       if (cellArrowsData.length === 0) return null;
 
       const membership = cellMembership[row]?.[col] || [];
