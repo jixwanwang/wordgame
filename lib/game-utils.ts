@@ -8,9 +8,13 @@ export const NUM_GUESSES = 15;
  * @param dateString - Date string in format MM-DD-YYYY
  * @returns Date object
  */
-function parseDate(dateString: string): Date {
-  const [month, day, year] = dateString.split("-").map(Number);
-  return new Date(year, month - 1, day); // month is 0-indexed in Date constructor
+export function parseDate(dateString: string): Date {
+  try {
+    const [month, day, year] = dateString.split("-").map(Number);
+    return new Date(year, month - 1, day); // month is 0-indexed in Date constructor
+  } catch {
+    return GAME_START_DATE;
+  }
 }
 
 /**

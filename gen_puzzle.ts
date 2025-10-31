@@ -123,8 +123,8 @@ export function generate_puzzle_internal(difficulty: Difficulty): Puzzle | null 
     return null;
   }
 
-  // Check that total unique letters is 13 or less
-  if (Object.keys(letterCounts).length > 13) {
+  // Check that total unique letters is 14 or less
+  if (Object.keys(letterCounts).length > 14) {
     return null;
   }
 
@@ -276,4 +276,4 @@ export default PUZZLES;
 }
 
 // console.log(UNCOMMON_DICTIONARY[4].length, UNCOMMON_DICTIONARY[5].length, UNCOMMON_DICTIONARY[6].length, UNCOMMON_DICTIONARY[7].length);
-generatePuzzlesForDateRange("10-28-2025", "normal", 100);
+generatePuzzlesForDateRange("11-01-2025", "normal", 100);

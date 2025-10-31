@@ -1,4 +1,4 @@
-import { NUM_GUESSES } from "@shared/lib/game-utils";
+import { NUM_GUESSES, parseDate } from "@shared/lib/game-utils";
 
 export const getDefaultGameState = (date: string) => ({
   date,
@@ -90,51 +90,85 @@ export function completeGame(date: string, wonGame: boolean): number {
     };
   }
 
-  if (wonGame) {
-    const gameDate = new Date(date);
-    const lastDate = history.lastCompletedDate ? new Date(history.lastCompletedDate) : null;
+  history.currentStreak = calculateStreakFromHistory(history);
+  history.lastCompletedDate = date;
 
-    if (lastDate == null) {
-      // First completed game
-      history.currentStreak = 1;
+  saveGameHistory(history);
+
+  return history.currentStreak;
+}
+
+// Helper function to calculate streak from game history
+function calculateStreakFromHistory(history: GameHistory): number {
+  // Get all completed games
+  const completedGames = Object.values(history.games).filter((game) => game.isComplete);
+
+  if (completedGames.length === 0) {
+    return 0;
+  }
+
+  // Sort by date in reverse chronological order (most recent first)
+  const sortedGames = completedGames.sort((a, b) => {
+    const dateA = parseDate(a.date);
+    const dateB = parseDate(b.date);
+    return dateB.getTime() - dateA.getTime();
+  });
+
+  // If the most recent game is a loss, streak is 0
+  if (!sortedGames[0].wonGame) {
+    return 0;
+  }
+
+  // Count consecutive wins
+  let streak = 0;
+  let previousDate: Date | null = null;
+
+  for (const game of sortedGames) {
+    // If this game was lost, stop counting
+    if (!game.wonGame) {
+      break;
+    }
+
+    const currentDate = parseDate(game.date);
+
+    if (previousDate === null) {
+      // First game (most recent)
+      streak = 1;
+      previousDate = currentDate;
     } else {
-      // Normalize both dates to midnight to compare calendar days, not time
-      const gameDateNormalized = new Date(
-        gameDate.getFullYear(),
-        gameDate.getMonth(),
-        gameDate.getDate(),
+      // Check if this game is the day before the previous game
+      const prevDateNormalized = new Date(
+        previousDate.getFullYear(),
+        previousDate.getMonth(),
+        previousDate.getDate(),
       );
-      const lastDateNormalized = new Date(
-        lastDate.getFullYear(),
-        lastDate.getMonth(),
-        lastDate.getDate(),
+      const currDateNormalized = new Date(
+        currentDate.getFullYear(),
+        currentDate.getMonth(),
+        currentDate.getDate(),
       );
 
-      const timeDiff = gameDateNormalized.getTime() - lastDateNormalized.getTime();
-      // small window to account for inexact timing
+      const timeDiff = prevDateNormalized.getTime() - currDateNormalized.getTime();
+      // Check if it's exactly one day apart (with small window for timing)
       const isConsecutiveDay =
         timeDiff > 1000 * 60 * 60 * 24 - 1000 && timeDiff < 1000 * 60 * 60 * 24 + 1000;
 
       if (isConsecutiveDay) {
-        history.currentStreak += 1;
+        streak += 1;
+        previousDate = currentDate;
       } else {
-        // broken streak, reset
-        history.currentStreak = 1;
+        // Gap in streak, stop counting
+        break;
       }
     }
-  } else {
-    history.currentStreak = 0;
   }
 
-  history.lastCompletedDate = date;
-
-  saveGameHistory(history);
-  return history.currentStreak;
+  return streak;
 }
 
 export function getCurrentStreak(): number {
   const history = getGameHistory();
-  return history.currentStreak ?? 0;
+  return calculateStreakFromHistory(history);
 }
 
 // Action: Clear all game history
