@@ -557,7 +557,6 @@ export const DICTIONARY: Record<number, string[]> = {
     "JAPAN",
     "JIMMY",
     "JOINT",
-    "JONES",
     "JUDGE",
     "KNOWN",
     "LABEL",

@@ -17,7 +17,7 @@ export interface SavedGameState {
   wonGame: boolean;
 }
 
-interface GameHistory {
+export interface GameHistory {
   games: Record<string, SavedGameState>;
   currentStreak: number;
   lastCompletedDate: string | null;
@@ -99,7 +99,7 @@ export function completeGame(date: string, wonGame: boolean): number {
 }
 
 // Helper function to calculate streak from game history
-function calculateStreakFromHistory(history: GameHistory): number {
+export function calculateStreakFromHistory(history: GameHistory): number {
   // Get all completed games
   const completedGames = Object.values(history.games).filter((game) => game.isComplete);
 
@@ -149,9 +149,9 @@ function calculateStreakFromHistory(history: GameHistory): number {
       );
 
       const timeDiff = prevDateNormalized.getTime() - currDateNormalized.getTime();
-      // Check if it's exactly one day apart (with small window for timing)
-      const isConsecutiveDay =
-        timeDiff > 1000 * 60 * 60 * 24 - 1000 && timeDiff < 1000 * 60 * 60 * 24 + 1000;
+      // Calculate days difference, accounting for DST (23-25 hour days)
+      const daysDiff = Math.round(timeDiff / (1000 * 60 * 60 * 24));
+      const isConsecutiveDay = daysDiff === 1;
 
       if (isConsecutiveDay) {
         streak += 1;

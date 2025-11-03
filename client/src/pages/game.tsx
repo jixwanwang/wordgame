@@ -4,10 +4,11 @@ import { CrosswordGrid } from "@/components/crossword-grid";
 import { GameStats } from "@/components/game-stats";
 import { GameKeyboard } from "@/components/game-keyboard";
 import { HowToPlayModal } from "@/components/how-to-play-modal";
+import { DebugHistoryModal } from "@/components/debug-history-modal";
 import { GameOverStats } from "@/components/game-over-stats";
 import { useGameState } from "@/hooks/use-game-state";
 import { SquareInput } from "@/components/square-input";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, Bug } from "lucide-react";
 import { getGameNumber, NUM_GUESSES, calculateRevealedLetterCount } from "@shared/lib/game-utils";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -34,6 +35,7 @@ export default function Game({ difficulty }: GameProps) {
 
   const [inputValue, setInputValue] = useState("");
   const [showHowToPlay, setShowHowToPlay] = useState(false);
+  const [showDebugHistory, setShowDebugHistory] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
@@ -176,6 +178,14 @@ export default function Game({ difficulty }: GameProps) {
           >
             <HelpCircle className="w-6 h-6" />
           </button>
+          <button
+            onClick={() => setShowDebugHistory(true)}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            data-testid="debug-button"
+            aria-label="Debug history"
+          >
+            <Bug className="w-5 h-5" />
+          </button>
           {difficulty === "practice" && (
             <span
               className="text-xs text-gray-500 px-2 py-1 rounded-sm bg-blue-300 font-medium"
@@ -196,6 +206,9 @@ export default function Game({ difficulty }: GameProps) {
         onOpenChange={setShowHowToPlay}
         isPractice={gameState.difficulty === "practice"}
       />
+
+      {/* Debug History Modal */}
+      <DebugHistoryModal open={showDebugHistory} onOpenChange={setShowDebugHistory} />
 
       <main className="container mx-auto px-2 sm:px-4 pb-4 max-w-2xl">
         <div className="relative">
