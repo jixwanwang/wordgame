@@ -178,14 +178,14 @@ export default function Game({ difficulty }: GameProps) {
           >
             <HelpCircle className="w-6 h-6" />
           </button>
-          <button
+          {/* <button
             onClick={() => setShowDebugHistory(true)}
             className="text-gray-400 hover:text-gray-600 transition-colors"
             data-testid="debug-button"
             aria-label="Debug history"
           >
             <Bug className="w-5 h-5" />
-          </button>
+          </button> */}
           {difficulty === "practice" && (
             <span
               className="text-xs text-gray-500 px-2 py-1 rounded-sm bg-blue-300 font-medium"
