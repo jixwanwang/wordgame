@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import { getGameHistory } from "@/lib/game-storage";
 
 interface DebugHistoryModalProps {
   open: boolean;
@@ -13,14 +14,12 @@ export function DebugHistoryModal({ open, onOpenChange }: DebugHistoryModalProps
   useEffect(() => {
     if (open) {
       // Fetch the raw history data from localStorage
-      const rawData = localStorage.getItem("wordgame-history");
-      if (rawData) {
+      const history = getGameHistory();
+      if (history) {
         try {
-          const parsed = JSON.parse(rawData);
-
           // Sort games by date in reverse chronological order
           const sortedGames: Record<string, any> = {};
-          const gameEntries = Object.entries(parsed.games);
+          const gameEntries = Object.entries(history.games);
           gameEntries.sort((a, b) => {
             // Parse dates in MM-DD-YYYY format
             const parseDate = (dateStr: string) => {
@@ -36,25 +35,25 @@ export function DebugHistoryModal({ open, onOpenChange }: DebugHistoryModalProps
             // Convert guessedLetters array to string for space efficiency
             sortedGames[date] = {
               ...game,
-              guessedLetters: game.guessedLetters.join("")
+              guessedLetters: game.guessedLetters.join(""),
             };
           }
 
           const sortedData = {
-            currentStreak: parsed.currentStreak,
-            lastCompletedDate: parsed.lastCompletedDate,
-            games: sortedGames
+            currentStreak: history.currentStreak,
+            lastCompletedDate: history.lastCompletedDate,
+            games: sortedGames,
           };
 
           setHistoryData(JSON.stringify(sortedData, null, 2));
         } catch (e) {
-          setHistoryData(`Error parsing history: ${e}\n\nRaw data:\n${rawData}`);
+          setHistoryData(`Error parsing history: ${e}\n\nRaw data:\n${history}`);
         }
       } else {
         setHistoryData("No game history found");
       }
     }
-  }, [open]);
+  }, [open, setHistoryData]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(historyData);

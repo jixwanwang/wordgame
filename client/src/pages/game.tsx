@@ -7,8 +7,9 @@ import { HowToPlayModal } from "@/components/how-to-play-modal";
 import { DebugHistoryModal } from "@/components/debug-history-modal";
 import { GameOverStats } from "@/components/game-over-stats";
 import { useGameState } from "@/hooks/use-game-state";
+import { useLongPress } from "@/hooks/use-long-press";
 import { SquareInput } from "@/components/square-input";
-import { HelpCircle, Bug } from "lucide-react";
+import { HelpCircle } from "lucide-react";
 import { getGameNumber, NUM_GUESSES, calculateRevealedLetterCount } from "@shared/lib/game-utils";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -61,6 +62,12 @@ export default function Game({ difficulty }: GameProps) {
       toastTimeoutRef.current = null;
     }, 1500);
   }, []);
+
+  // Long press handlers for help button
+  const helpButtonHandlers = useLongPress({
+    onShortPress: () => setShowHowToPlay(true),
+    onLongPress: () => setShowDebugHistory(true),
+  });
 
   const revealedCount = grid.getRevealedCount();
 
@@ -171,7 +178,7 @@ export default function Game({ difficulty }: GameProps) {
             </h1>
           </div>
           <button
-            onClick={() => setShowHowToPlay(true)}
+            {...helpButtonHandlers}
             className="text-gray-500 hover:text-gray-700 transition-colors"
             data-testid="help-button"
             aria-label="How to play"

@@ -1,4 +1,5 @@
 import { NUM_GUESSES, parseDate } from "@shared/lib/game-utils";
+import { SavedGameState } from "@shared/lib/schema";
 
 export const getDefaultGameState = (date: string) => ({
   date,
@@ -8,15 +9,6 @@ export const getDefaultGameState = (date: string) => ({
   wonGame: false,
 });
 
-// this should eventually be replaced by api calls
-export interface SavedGameState {
-  date: string;
-  guessesRemaining: number;
-  guessedLetters: string[];
-  isComplete: boolean;
-  wonGame: boolean;
-}
-
 export interface GameHistory {
   games: Record<string, SavedGameState>;
   currentStreak: number;
@@ -25,7 +17,7 @@ export interface GameHistory {
 
 const STORAGE_KEY = "wordgame-history";
 
-function getGameHistory(): GameHistory {
+export function getGameHistory(): GameHistory {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored == null) {
     return {
