@@ -4,6 +4,40 @@ import { Difficulty, Puzzle } from "./lib/puzzles_types";
 import { validate_puzzle } from "./test_puzzle";
 import * as fs from "fs";
 
+// Scrabble letter scores
+const LETTER_SCORES: { [key: string]: number } = {
+  A: 1,
+  B: 3,
+  C: 3,
+  D: 2,
+  E: 1,
+  F: 4,
+  G: 2,
+  H: 4,
+  I: 1,
+  J: 6,
+  K: 5,
+  L: 1,
+  M: 3,
+  N: 1,
+  O: 1,
+  P: 3,
+  Q: 5,
+  R: 1,
+  S: 1,
+  T: 1,
+  U: 1,
+  V: 4,
+  W: 4,
+  X: 6,
+  Y: 4,
+  Z: 7,
+};
+
+function calculatePuzzleScore(letters: string[]): number {
+  return [...letters].reduce((acc, letter) => acc + LETTER_SCORES[letter], 0);
+}
+
 function placeWord(
   word: string,
   grid: Grid8x8,
@@ -123,8 +157,9 @@ export function generate_puzzle_internal(difficulty: Difficulty): Puzzle | null 
     return null;
   }
 
+  const numLetters = Object.keys(letterCounts).length;
   // Check that total unique letters is 14 or less
-  if (Object.keys(letterCounts).length > 14) {
+  if (numLetters > 14) {
     return null;
   }
 
@@ -140,6 +175,13 @@ export function generate_puzzle_internal(difficulty: Difficulty): Puzzle | null 
   });
 
   if (usedVowels.size === vowels.size) {
+    return null;
+  }
+
+  // Calculate and validate puzzle score
+  const puzzleScore = calculatePuzzleScore(Object.keys(letterCounts));
+  const minScore = numLetters * 2 - 1;
+  if (puzzleScore < minScore) {
     return null;
   }
 
@@ -186,6 +228,7 @@ export function generate_puzzle_internal(difficulty: Difficulty): Puzzle | null 
     wordPositions: wordPositions,
   };
   if (validate_puzzle(puzzle)) {
+    console.log(`  Score: ${puzzleScore} points`);
     return puzzle;
   }
   return null;
@@ -276,4 +319,4 @@ export default PUZZLES;
 }
 
 // console.log(UNCOMMON_DICTIONARY[4].length, UNCOMMON_DICTIONARY[5].length, UNCOMMON_DICTIONARY[6].length, UNCOMMON_DICTIONARY[7].length);
-generatePuzzlesForDateRange("11-01-2025", "normal", 100);
+generatePuzzlesForDateRange("12-15-2025", "normal", 60);

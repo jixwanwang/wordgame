@@ -10,15 +10,19 @@ function validateDictionary() {
   let totalChecked = 0;
 
   // Validate word lengths in DICTIONARY
-  console.log("\nValidating word lengths in DICTIONARY...");
+  console.log("\nValidating words in DICTIONARY...");
   for (const length of [4, 5, 6, 7]) {
     const words = getWordsByLength(length);
-    console.log(`  Checking ${words.length} words from DICTIONARY[${length}]...`);
 
+    const wordSet = new Set();
     for (const word of words) {
       if (word.length !== length) {
         wrongLengthWords.push(`DICTIONARY[${length}]: "${word}" has length ${word.length}`);
       }
+      if (wordSet.has(word)) {
+        console.log(`\n ${word} is duplicated`);
+      }
+      wordSet.add(word);
     }
   }
 
