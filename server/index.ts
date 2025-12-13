@@ -2,6 +2,7 @@ import express from "express";
 import type { Request, Response } from "express";
 import type { Database } from "./db.js";
 import { StubDatabase } from "./db.js";
+import { PostgresDatabase } from "./postgres-db.js";
 import {
   validateUsername,
   validatePassword,
@@ -171,7 +172,7 @@ export function createApp(db: Database) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid date format. Use YYYY-MM-DD',
+          message: "Invalid date format. Use YYYY-MM-DD",
         });
       }
       puzzle = getPuzzleByDate(requestedDate);
@@ -180,19 +181,19 @@ export function createApp(db: Database) {
       puzzle = getTodaysPuzzle();
       // Get today's date in YYYY-MM-DD format
       const today = new Date();
-      puzzleDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      puzzleDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     }
 
     if (puzzle === null) {
       return res.status(404).json({
         success: false,
-        message: 'No puzzle available for this date',
+        message: "No puzzle available for this date",
       });
     }
 
     // Format response
     const response: any = {
-      id: `puzzle_${puzzleDate.replace(/-/g, '_')}`,
+      id: `puzzle_${puzzleDate.replace(/-/g, "_")}`,
       date: puzzleDate,
       words: puzzle.words,
       grid: puzzle.grid,
@@ -200,7 +201,7 @@ export function createApp(db: Database) {
     };
 
     // Include auth information if user is authenticated or if token was provided
-    if (req.tokenStatus && req.tokenStatus !== 'missing') {
+    if (req.tokenStatus && req.tokenStatus !== "missing") {
       response.auth = {
         username: req.user?.username,
         tokenStatus: req.tokenStatus,
@@ -209,7 +210,7 @@ export function createApp(db: Database) {
       // Valid authenticated user
       response.auth = {
         username: req.user.username,
-        tokenStatus: 'valid',
+        tokenStatus: "valid",
       };
     }
 
@@ -220,58 +221,52 @@ export function createApp(db: Database) {
    * POST /api/submit
    * Submit a result for the puzzle of the day (requires authentication)
    * Request headers: Authorization: Bearer <token>
-   * Request body: { puzzleId: string, score: number, words: string[] }
-   * Response: { success: boolean, message?: string, ranking?: number }
+   * Request body: { puzzleId: string, guesses: string[] }
+   * Response: { success: boolean, message?: string }
    */
-  app.post(
-    "/api/submit",
-    authenticateToken,
-    async (req: Request, res: Response) => {
-      const { puzzleId, score, words } = req.body;
+  app.post("/api/submit", authenticateToken, async (req: Request, res: Response) => {
+    const { puzzleId, guesses } = req.body;
 
-      // Get username from JWT token
-      const username = req.user?.username;
+    // Get username from JWT token
+    const username = req.user?.username;
 
-      if (!username) {
-        return res.status(401).json({
-          success: false,
-          message: "Authentication required",
-        });
-      }
-
-      // Validation
-      if (!puzzleId || score === undefined || !words) {
-        return res.status(400).json({
-          success: false,
-          message: "puzzleId, score, and words are required",
-        });
-      }
-
-      try {
-        // Extract date from puzzleId (format: puzzle_YYYY_MM_DD)
-        const datePart = puzzleId.replace("puzzle_", "").replace(/_/g, "-");
-
-        // TODO: Validate words against puzzle
-        // TODO: Calculate actual score
-        // TODO: Calculate actual ranking
-
-        // Store result in database
-        await db.insertPuzzleResult(username, datePart, score, words);
-
-        return res.json({
-          success: true,
-          message: "Result submitted successfully",
-          ranking: Math.floor(Math.random() * 100) + 1, // Random ranking for demo
-        });
-      } catch (error) {
-        console.log(error);
-        return res.status(500).json({
-          success: false,
-          message: "Failed to submit result",
-        });
-      }
+    if (username == null) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
     }
-  );
+
+    // Validation
+    if (puzzleId == null || guesses == null) {
+      return res.status(400).json({
+        success: false,
+        message: "puzzleId is required",
+      });
+    }
+
+    try {
+      // Extract date from puzzleId (format: puzzle_YYYY_MM_DD)
+      const datePart = puzzleId.replace("puzzle_", "").replace(/_/g, "-");
+
+      // TODO: Validate words against puzzle
+      // TODO: Calculate actual score
+      // TODO: Calculate actual ranking
+
+      // Store result in database
+      await db.insertPuzzleResult(username, datePart, guesses, guesses.length < 15);
+
+      return res.json({
+        success: true,
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to submit result",
+      });
+    }
+  });
 
   // Health check endpoint
   app.get("/health", (_req: Request, res: Response) => {
@@ -281,17 +276,21 @@ export function createApp(db: Database) {
   return app;
 }
 
-// Create app with stub database for development
-const app = createApp(new StubDatabase());
+// Initialize database based on environment
+function initializeDatabase(): Database {
+  const databaseUrl = process.env.DATABASE_URL;
 
-// Export app for testing
-export { app };
-
-// Start server only if this file is run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
-  });
+  if (databaseUrl) {
+    console.log("Using PostgreSQL database");
+    return new PostgresDatabase(databaseUrl);
+  } else {
+    console.log("Using StubDatabase (in-memory) - set DATABASE_URL to use PostgreSQL");
+    return new StubDatabase();
+  }
 }
+
+// Create app with appropriate database
+const app = createApp(initializeDatabase());
+
+// Export app for testing and production use
+export { app };

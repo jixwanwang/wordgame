@@ -5,8 +5,9 @@
 export interface PuzzleResult {
   username: string;
   date: string;
-  score: number;
-  words: string[];
+  guesses: string[];
+  numGuesses: number;
+  won: boolean;
   submittedAt: Date;
 }
 
@@ -49,8 +50,8 @@ export interface Database {
   insertPuzzleResult(
     username: string,
     date: string,
-    score: number,
-    words: string[]
+    guesses: string[],
+    won: boolean,
   ): Promise<void>;
 }
 
@@ -71,7 +72,7 @@ export class StubDatabase implements Database {
   async createUser(username: string, password: string): Promise<void> {
     const lowerUsername = username.toLowerCase();
     if (this.users.has(lowerUsername)) {
-      throw new Error('Username already exists');
+      throw new Error("Username already exists");
     }
     // For the stub database, we'll store the plaintext password
     // Real database implementations should hash the password
@@ -107,15 +108,16 @@ export class StubDatabase implements Database {
   async insertPuzzleResult(
     username: string,
     date: string,
-    score: number,
-    words: string[]
+    guesses: string[],
+    won: boolean,
   ): Promise<void> {
     const key = `${username}_${date}`;
     const result: PuzzleResult = {
       username,
       date,
-      score,
-      words,
+      guesses,
+      numGuesses: guesses.length,
+      won,
       submittedAt: new Date(),
     };
     this.results.set(key, result);

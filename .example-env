@@ -1,0 +1,19 @@
+# Database Configuration
+# For local development with Cloud SQL Proxy:
+# DATABASE_URL=postgresql://wordgame_user:YOUR_PASSWORD@localhost:5432/wordgame
+
+# For production (Compute Engine with Cloud SQL):
+# DATABASE_URL=postgresql://wordgame_user:YOUR_PASSWORD@/wordgame?host=/cloudsql/project-ce31194e-b92f-4b22-9e0:us-west1:wordgame
+
+# For direct connection (if Cloud SQL has public IP):
+DATABASE_URL=postgresql://wordgame_user:PASSWORD@HOST:5432/wordgame
+
+# Application Configuration
+NODE_ENV=development
+PORT=3000
+
+# JWT Secret (generate with: openssl rand -base64 32)
+JWT_SECRET=your-secret-key-here
+
+# Cloud SQL Connection Name
+CLOUD_SQL_CONNECTION_NAME=project-ce31194e-b92f-4b22-9e0:us-west1:wordgame
