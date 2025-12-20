@@ -11,6 +11,8 @@ import {
   optionalAuthenticateToken,
 } from "./auth.js";
 import { getPuzzleByDate, getTodaysPuzzle } from "./puzzles.js";
+import { convertHistoryToResults } from "./history-converter.js";
+import type { GameHistory } from "../lib/schema.js";
 
 /**
  * Create and configure the Express app with dependencies injected
@@ -24,27 +26,31 @@ export function createApp(db: Database) {
   /**
    * POST /api/register
    * Register a new user
-   * Request body: { username: string, password: string }
-   * Response: { success: boolean, username?: string, token?: string, message?: string }
+   * Request body: { username: string, password: string, history?: GameHistory }
+   * Response: { success: boolean, username?: string, token?: string, message?: string, errors?: Record<string, string> }
    */
   app.post("/api/register", async (req: Request, res: Response) => {
-    const { username, password } = req.body;
+    const { username, password, history } = req.body;
+    const errors: Record<string, string> = {};
 
     // Validate username format
     const usernameValidation = validateUsername(username);
     if (!usernameValidation.valid) {
-      return res.status(400).json({
-        success: false,
-        message: usernameValidation.error,
-      });
+      errors.username = usernameValidation.error;
     }
 
     // Validate password format
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
+      errors.password = passwordValidation.error;
+    }
+
+    // Return validation errors if any
+    if (Object.keys(errors).length > 0) {
       return res.status(400).json({
         success: false,
-        message: passwordValidation.error,
+        message: "Validation failed",
+        errors,
       });
     }
 
@@ -55,11 +61,30 @@ export function createApp(db: Database) {
         return res.status(409).json({
           success: false,
           message: "Username already exists",
+          errors: { username: "Username already exists" },
         });
       }
 
       // Create new user
       await db.createUser(username, password);
+
+      // If history is provided, convert and save it
+      if (history) {
+        const results = convertHistoryToResults(history);
+        for (const result of results) {
+          try {
+            await db.insertPuzzleResult(
+              username,
+              result.date,
+              result.guesses,
+              result.won
+            );
+          } catch (error) {
+            // Log but don't fail registration if history sync fails
+            console.error(`Failed to sync history for date ${result.date}:`, error);
+          }
+        }
+      }
 
       // Generate auth token
       const token = generateAuthToken(username);
@@ -82,27 +107,25 @@ export function createApp(db: Database) {
   /**
    * POST /api/login
    * Login an existing user
-   * Request body: { username: string, password: string }
-   * Response: { success: boolean, username?: string, token?: string, message?: string }
+   * Request body: { username: string, password: string, history?: GameHistory }
+   * Response: { success: boolean, username?: string, token?: string, message?: string, errors?: Record<string, string> }
    */
   app.post("/api/login", async (req: Request, res: Response) => {
-    const { username, password } = req.body;
+    const { username, password, history } = req.body;
+    const errors: Record<string, string> = {};
 
-    // Validate username format
-    const usernameValidation = validateUsername(username);
-    if (!usernameValidation.valid) {
-      return res.status(400).json({
-        success: false,
-        message: usernameValidation.error,
-      });
-    }
-
-    // Validate password format
+    // Validate password format (only check format, not correctness)
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
+      errors.password = passwordValidation.error;
+    }
+
+    // Return validation errors if any
+    if (Object.keys(errors).length > 0) {
       return res.status(400).json({
         success: false,
-        message: passwordValidation.error,
+        message: "Validation failed",
+        errors,
       });
     }
 
@@ -114,6 +137,7 @@ export function createApp(db: Database) {
         return res.status(401).json({
           success: false,
           message: "Invalid username or password",
+          errors: { general: "Invalid username or password" },
         });
       }
 
@@ -126,6 +150,24 @@ export function createApp(db: Database) {
           success: false,
           message: "Internal server error",
         });
+      }
+
+      // If history is provided, convert and save it
+      if (history) {
+        const results = convertHistoryToResults(history);
+        for (const result of results) {
+          try {
+            await db.insertPuzzleResult(
+              username,
+              result.date,
+              result.guesses,
+              result.won
+            );
+          } catch (error) {
+            // Log but don't fail login if history sync fails
+            console.error(`Failed to sync history for date ${result.date}:`, error);
+          }
+        }
       }
 
       // Generate auth token with original username
@@ -157,10 +199,11 @@ export function createApp(db: Database) {
    *   words: string[],
    *   grid: GameGrid,
    *   wordPositions: Record<string, [number, number][]>,
-   *   auth?: { username: string, tokenStatus: string }
+   *   auth?: { username: string, tokenStatus: string },
+   *   userResult?: { guesses: string[], numGuesses: number, won: boolean, submittedAt: Date }
    * }
    */
-  app.get("/api/puzzle", optionalAuthenticateToken, (req: Request, res: Response) => {
+  app.get("/api/puzzle", optionalAuthenticateToken, async (req: Request, res: Response) => {
     const requestedDate = req.query.date as string | undefined;
 
     // Fetch puzzle based on date or get today's puzzle
@@ -214,6 +257,24 @@ export function createApp(db: Database) {
       };
     }
 
+    // If user is authenticated, fetch their result for this puzzle
+    if (req.user?.username) {
+      try {
+        const userResult = await db.getPuzzleResult(req.user.username, puzzleDate);
+        if (userResult) {
+          response.userResult = {
+            guesses: userResult.guesses,
+            numGuesses: userResult.numGuesses,
+            won: userResult.won,
+            submittedAt: userResult.submittedAt,
+          };
+        }
+      } catch (error) {
+        console.error("Error fetching user result:", error);
+        // Don't fail the request if we can't fetch the result
+      }
+    }
+
     return res.json(response);
   });
 
@@ -264,6 +325,38 @@ export function createApp(db: Database) {
       return res.status(500).json({
         success: false,
         message: "Failed to submit result",
+      });
+    }
+  });
+
+  /**
+   * GET /api/history
+   * Get all puzzle results for the authenticated user
+   * Headers: Authorization: Bearer <token>
+   * Response: { success: boolean, results?: PuzzleResult[], message?: string }
+   */
+  app.get("/api/history", authenticateToken, async (req: Request, res: Response) => {
+    const username = req.user?.username;
+
+    if (username == null) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    try {
+      const results = await db.getAllPuzzleResults(username);
+
+      return res.json({
+        success: true,
+        results,
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch history",
       });
     }
   });

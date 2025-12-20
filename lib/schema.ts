@@ -24,3 +24,9 @@ export interface SavedGameState {
   isComplete: boolean;
   wonGame: boolean;
 }
+
+export interface GameHistory {
+  games: Record<string, SavedGameState>;
+  currentStreak: number;
+  lastCompletedDate: string | null;
+}

@@ -118,6 +118,24 @@ export class PostgresDatabase implements Database {
     };
   }
 
+  async getAllPuzzleResults(username: string): Promise<PuzzleResult[]> {
+    const lowerUsername = username.toLowerCase();
+
+    const rows = await this.db
+      .select()
+      .from(results)
+      .where(eq(results.username, lowerUsername));
+
+    return rows.map(row => ({
+      username: row.username,
+      date: row.date,
+      guesses: JSON.parse(row.guesses),
+      numGuesses: parseInt(row.numGuesses, 10),
+      won: row.won,
+      submittedAt: row.submittedAt,
+    }));
+  }
+
   async insertPuzzleResult(
     username: string,
     date: string,
@@ -130,7 +148,7 @@ export class PostgresDatabase implements Database {
     const guessesJson = JSON.stringify(guesses);
     const numGuesses = guesses.length.toString();
 
-    // Insert or update (upsert)
+    // Insert only if not exists (do not overwrite existing records)
     await this.db
       .insert(results)
       .values({
@@ -140,14 +158,8 @@ export class PostgresDatabase implements Database {
         numGuesses,
         won,
       })
-      .onConflictDoUpdate({
+      .onConflictDoNothing({
         target: [results.username, results.date],
-        set: {
-          guesses: guessesJson,
-          numGuesses,
-          won,
-          submittedAt: new Date(),
-        },
       });
   }
 

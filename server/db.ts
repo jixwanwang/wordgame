@@ -44,6 +44,12 @@ export interface Database {
   getPuzzleResult(username: string, date: string): Promise<PuzzleResult | null>;
 
   /**
+   * Get all puzzle results for a specific user
+   * @returns Array of PuzzleResult for the user
+   */
+  getAllPuzzleResults(username: string): Promise<PuzzleResult[]>;
+
+  /**
    * Insert or update puzzle result for a user and date
    * @throws Error if validation fails
    */
@@ -103,6 +109,17 @@ export class StubDatabase implements Database {
   async getPuzzleResult(username: string, date: string): Promise<PuzzleResult | null> {
     const key = `${username}_${date}`;
     return this.results.get(key) || null;
+  }
+
+  async getAllPuzzleResults(username: string): Promise<PuzzleResult[]> {
+    const lowerUsername = username.toLowerCase();
+    const results: PuzzleResult[] = [];
+    for (const [key, result] of this.results.entries()) {
+      if (result.username.toLowerCase() === lowerUsername) {
+        results.push(result);
+      }
+    }
+    return results;
   }
 
   async insertPuzzleResult(

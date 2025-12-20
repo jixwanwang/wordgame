@@ -1,5 +1,5 @@
 import { NUM_GUESSES, parseDate } from "@shared/lib/game-utils";
-import { SavedGameState } from "@shared/lib/schema";
+import type { SavedGameState, GameHistory } from "@shared/lib/schema";
 
 export const getDefaultGameState = (date: string) => ({
   date,
@@ -9,11 +9,8 @@ export const getDefaultGameState = (date: string) => ({
   wonGame: false,
 });
 
-export interface GameHistory {
-  games: Record<string, SavedGameState>;
-  currentStreak: number;
-  lastCompletedDate: string | null;
-}
+// Re-export GameHistory for backward compatibility
+export type { GameHistory };
 
 const STORAGE_KEY = "wordgame-history";
 

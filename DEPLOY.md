@@ -168,17 +168,20 @@ CLOUD_SQL_CONNECTION_NAME=project-ce31194e-b92f-4b22-9e0:us-west1:wordgame
 **Purpose**: Copy source code from local machine to VM
 
 **What it does**:
+
 1. Reads GCP config from `.env`
 2. Creates remote directory on VM
 3. Copies directories: `server/`, `client/`, `lib/`, `scripts/`
 4. Copies files: `package.json`, `tsconfig.json`, `drizzle.config.ts`, etc.
 
 **Usage**:
+
 ```bash
 ./scripts/deploy.sh
 ```
 
 **Underlying commands**:
+
 ```bash
 # Create remote directory
 gcloud compute ssh $VM_NAME \
@@ -208,15 +211,18 @@ gcloud compute scp \
 **Purpose**: SSH into the VM
 
 **What it does**:
+
 1. Reads GCP config from `.env`
 2. Opens SSH connection to VM
 
 **Usage**:
+
 ```bash
 ./scripts/ssh.sh
 ```
 
 **Underlying command**:
+
 ```bash
 gcloud compute ssh wordgame \
   --project=project-ce31194e-b92f-4b22-9e0 \
@@ -230,6 +236,7 @@ gcloud compute ssh wordgame \
 **Purpose**: Initial VM setup and application installation (run ON THE VM)
 
 **What it does**:
+
 1. Installs Node.js 20 (if not present)
 2. Installs PM2 globally (if not present)
 3. Runs `npm install`
@@ -240,6 +247,7 @@ gcloud compute ssh wordgame \
 8. Sets up PM2 to auto-start on boot
 
 **Usage**:
+
 ```bash
 # On the VM
 cd wordgame
@@ -247,6 +255,7 @@ cd wordgame
 ```
 
 **Underlying commands**:
+
 ```bash
 # Install Node.js
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
@@ -278,6 +287,7 @@ sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u $USER --hp $HOME
 **Purpose**: Install and configure Nginx reverse proxy (run ON THE VM)
 
 **What it does**:
+
 1. Installs Nginx (if not present)
 2. Creates reverse proxy configuration
 3. Proxies port 80 → localhost:3000
@@ -285,6 +295,7 @@ sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u $USER --hp $HOME
 5. Enables site and restarts Nginx
 
 **Usage**:
+
 ```bash
 # On the VM
 cd wordgame
@@ -292,6 +303,7 @@ cd wordgame
 ```
 
 **Underlying commands**:
+
 ```bash
 # Install Nginx
 sudo apt-get update
@@ -314,57 +326,25 @@ sudo systemctl enable nginx
 
 ---
 
-### `scripts/cleanup-port.sh`
-
-**Purpose**: Clean up port 3000 if it's stuck (run ON THE VM)
-
-**What it does**:
-1. Checks what's using port 3000
-2. Stops all PM2 processes
-3. Kills any lingering node processes
-4. Verifies port is free
-
-**Usage**:
-```bash
-# On the VM
-cd wordgame
-./scripts/cleanup-port.sh
-```
-
-**Underlying commands**:
-```bash
-# Check port usage
-sudo ss -tlnp | grep :3000
-
-# Stop PM2
-pm2 stop all
-pm2 delete all
-
-# Kill node processes
-pkill -9 node
-
-# Verify port is free
-sudo ss -tlnp | grep :3000  # Should return nothing
-```
-
----
-
 ### `scripts/cloud-sql-proxy.sh`
 
 **Purpose**: Start Cloud SQL Proxy for local development (run ON LOCAL MACHINE)
 
 **What it does**:
+
 1. Downloads Cloud SQL Proxy if not installed
 2. Starts proxy on localhost:5432
 3. Connects to Cloud SQL instance
 
 **Usage**:
+
 ```bash
 # On local machine
 ./scripts/cloud-sql-proxy.sh
 ```
 
 **Underlying command**:
+
 ```bash
 cloud-sql-proxy --port=5432 project-ce31194e-b92f-4b22-9e0:us-west1:wordgame
 ```
@@ -410,6 +390,7 @@ nano .env
 ```
 
 Add:
+
 ```
 DATABASE_URL=postgresql://wordgame_user:YOUR_PASSWORD@/wordgame?host=/cloudsql/project-ce31194e-b92f-4b22-9e0:us-west1:wordgame
 NODE_ENV=production
@@ -710,6 +691,7 @@ sudo certbot renew
 **Symptom**: PM2 shows app as "errored" or constantly restarting
 
 **Diagnosis**:
+
 ```bash
 # View PM2 logs
 pm2 logs wordgame-api --lines 100
@@ -726,6 +708,7 @@ cat ~/wordgame/.env
 ```
 
 **Common Causes**:
+
 1. **Build failed**: Run `npm run build` and check for errors
 2. **Missing dependencies**: Run `npm install`
 3. **Port already in use**: Run `./scripts/cleanup-port.sh`
@@ -738,6 +721,7 @@ cat ~/wordgame/.env
 **Symptom**: `Error: listen EADDRINUSE: address already in use :::3000`
 
 **Solution**:
+
 ```bash
 # Automated cleanup
 ./scripts/cleanup-port.sh
@@ -758,6 +742,7 @@ pm2 start npm --name wordgame-api -- start
 **Symptom**: Can't connect to database, authentication errors
 
 **Diagnosis**:
+
 ```bash
 # Check if DATABASE_URL is set
 echo $DATABASE_URL
@@ -781,6 +766,7 @@ gcloud sql users list \
 ```
 
 **Common Causes**:
+
 1. **Wrong password**: Update `.env` with correct password
 2. **Database doesn't exist**: Create database via Cloud Console
 3. **User doesn't exist**: Create user via Cloud Console
@@ -793,6 +779,7 @@ gcloud sql users list \
 **Symptom**: Can't access site via HTTP, Nginx errors
 
 **Diagnosis**:
+
 ```bash
 # Check Nginx status
 sudo systemctl status nginx
@@ -813,6 +800,7 @@ gcloud compute firewall-rules list \
 ```
 
 **Common Causes**:
+
 1. **Configuration syntax error**: Run `sudo nginx -t` to find errors
 2. **Port 80 not allowed**: Add firewall rule for port 80
 3. **Nginx not running**: Run `sudo systemctl start nginx`
@@ -825,6 +813,7 @@ gcloud compute firewall-rules list \
 **Symptom**: SSH connection refused or times out
 
 **Diagnosis**:
+
 ```bash
 # Check VM is running
 gcloud compute instances list \
@@ -842,6 +831,7 @@ gcloud compute instances get-serial-port-output wordgame \
 ```
 
 **Solutions**:
+
 ```bash
 # Start VM if stopped
 gcloud compute instances start wordgame \
@@ -861,6 +851,7 @@ gcloud compute instances reset wordgame \
 **Symptom**: PM2 shows app as "online" but API doesn't respond
 
 **Diagnosis**:
+
 ```bash
 # Check if app is actually listening
 sudo ss -tlnp | grep :3000
@@ -877,6 +868,7 @@ curl -v http://localhost:3000  # Direct to app
 ```
 
 **Common Causes**:
+
 1. **App crashed but PM2 hasn't restarted yet**: Check `pm2 logs`
 2. **App not binding to port**: Check startup logs
 3. **Nginx misconfigured**: Test with direct connection to port 3000

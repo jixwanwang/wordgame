@@ -6,14 +6,16 @@ import { GameKeyboard } from "@/components/game-keyboard";
 import { HowToPlayModal } from "@/components/how-to-play-modal";
 import { DebugHistoryModal } from "@/components/debug-history-modal";
 import { GameOverStats } from "@/components/game-over-stats";
+import { AuthModal } from "@/components/auth-modal";
 import { useGameState } from "@/hooks/use-game-state";
 import { useLongPress } from "@/hooks/use-long-press";
 import { SquareInput } from "@/components/square-input";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, Database } from "lucide-react";
 import { getGameNumber, NUM_GUESSES, calculateRevealedLetterCount } from "@shared/lib/game-utils";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { isValidWord } from "@shared/lib/all_words";
+import { API, Auth } from "@/lib/api-client";
 
 // separate the storage layer with a proper api for actions rather than whole state updates
 // use the error popup for tutorial. start with guess a letter (and give a suggestion that will guarantee multiple)
@@ -37,17 +39,41 @@ export default function Game({ difficulty }: GameProps) {
   const [inputValue, setInputValue] = useState("");
   const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [showDebugHistory, setShowDebugHistory] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  // Show how to play modal for first-time users
+  // Show auth modal if not logged in, or show how to play modal for first-time users
   useEffect(() => {
-    const hasHistory = localStorage.getItem("wordgame-history");
-    if (!hasHistory) {
-      setTimeout(() => {
-        setShowHowToPlay(true);
-      }, 1000);
-    }
+    const checkAuth = async () => {
+      // Check if user is authenticated
+      if (!Auth.isAuthenticated()) {
+        setTimeout(() => {
+          setShowAuthModal(true);
+        }, 500);
+        return;
+      }
+
+      // If authenticated, verify token is still valid
+      const isValid = await API.checkAuthToken();
+      if (!isValid) {
+        Auth.logout(); // Clear the expired token
+        setTimeout(() => {
+          setShowAuthModal(true);
+        }, 500);
+        return;
+      }
+
+      // If authenticated and token valid, show how to play for first-time users
+      const hasHistory = localStorage.getItem("wordgame-history");
+      if (!hasHistory) {
+        setTimeout(() => {
+          setShowHowToPlay(true);
+        }, 1000);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   const showToast = useCallback((text: string) => {
@@ -68,6 +94,16 @@ export default function Game({ difficulty }: GameProps) {
     onShortPress: () => setShowHowToPlay(true),
     onLongPress: () => setShowDebugHistory(true),
   });
+
+  // Fetch and log history from database
+  const handleFetchHistory = async () => {
+    try {
+      const response = await API.getHistory();
+      console.log("History from database:", response);
+    } catch (error) {
+      console.error("Failed to fetch history:", error);
+    }
+  };
 
   const revealedCount = grid.getRevealedCount();
 
@@ -132,6 +168,7 @@ export default function Game({ difficulty }: GameProps) {
   // Handle keyboard input
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (showAuthModal) return;
       if (gameState.gameStatus !== "playing") return;
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       if (e.key === "Enter") {
@@ -160,7 +197,7 @@ export default function Game({ difficulty }: GameProps) {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleGuess, handleBackspaceClick, gameState.gameStatus, showToast]);
+  }, [handleGuess, handleBackspaceClick, gameState.gameStatus, showToast, showAuthModal]);
 
   if (currentPuzzle == null) {
     return null;
@@ -176,6 +213,20 @@ export default function Game({ difficulty }: GameProps) {
             <h1 className="text-2xl sm:text-3xl font-bold text-dark">
               Crosses {difficulty !== "practice" ? `#${puzzleNumber}` : ""}
             </h1>
+            {Auth.isAuthenticated() && (
+              <div className="flex items-center gap-2 ml-2">
+                <span className="text-sm text-gray-600">({Auth.getUsername()})</span>
+                <button
+                  onClick={() => {
+                    Auth.logout();
+                    window.location.reload();
+                  }}
+                  className="text-xs text-gray-500 hover:text-gray-700 underline"
+                >
+                  logout
+                </button>
+              </div>
+            )}
           </div>
           <button
             {...helpButtonHandlers}
@@ -185,6 +236,16 @@ export default function Game({ difficulty }: GameProps) {
           >
             <HelpCircle className="w-6 h-6" />
           </button>
+          {Auth.isAuthenticated() && (
+            <button
+              onClick={handleFetchHistory}
+              className="text-gray-500 hover:text-gray-700 transition-colors"
+              data-testid="fetch-history-button"
+              aria-label="Fetch history from database"
+            >
+              <Database className="w-6 h-6" />
+            </button>
+          )}
           {/* <button
             onClick={() => setShowDebugHistory(true)}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -206,6 +267,22 @@ export default function Game({ difficulty }: GameProps) {
           )}
         </div>
       </header>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={(username) => {
+          console.log("Logged in as:", username);
+          // Show how to play modal after successful auth for first-time users
+          const hasHistory = localStorage.getItem("wordgame-history");
+          if (!hasHistory) {
+            setTimeout(() => {
+              setShowHowToPlay(true);
+            }, 500);
+          }
+        }}
+      />
 
       {/* How to Play Modal */}
       <HowToPlayModal
