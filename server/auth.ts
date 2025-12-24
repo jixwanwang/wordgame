@@ -34,7 +34,7 @@ const USERNAME_REGEX = /^[a-zA-Z0-9]+$/;
  * Username constraints
  */
 const MIN_USERNAME_LENGTH = 3;
-const MAX_USERNAME_LENGTH = 24;
+const MAX_USERNAME_LENGTH = 16;
 const MIN_PASSWORD_LENGTH = 10;
 
 export interface UsernameValidationError {

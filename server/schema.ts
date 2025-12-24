@@ -1,4 +1,4 @@
-import { pgTable, varchar, text, timestamp, boolean, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, varchar, text, timestamp, boolean, integer, primaryKey } from "drizzle-orm/pg-core";
 
 /**
  * Users table
@@ -26,12 +26,12 @@ export const results = pgTable(
     username: varchar("username", { length: 50 })
       .notNull()
       .references(() => users.username, { onDelete: "cascade" }),
-    // Puzzle date in YYYY-MM-DD format
+    // Puzzle date in MM-DD-YYYY format
     date: varchar("date", { length: 10 }).notNull(),
     // Array of guesses as JSON text
     guesses: text("guesses").notNull(),
     // Number of guesses made
-    numGuesses: varchar("num_guesses", { length: 10 }).notNull(),
+    numGuesses: integer("num_guesses").notNull(),
     // Whether the user won
     won: boolean("won").notNull(),
     // Timestamp when result was submitted

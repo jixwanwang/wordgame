@@ -1,3 +1,8 @@
+import dotenv from "dotenv";
+
+// Load environment variables from .env file before anything else
+dotenv.config();
+
 import express from "express";
 import type { Request, Response } from "express";
 import type { Database } from "./db.js";
@@ -12,7 +17,6 @@ import {
 } from "./auth.js";
 import { getPuzzleByDate, getTodaysPuzzle } from "./puzzles.js";
 import { convertHistoryToResults } from "./history-converter.js";
-import type { GameHistory } from "../lib/schema.js";
 import { computeStatsFromHistory } from "./stats.js";
 
 /**
@@ -92,7 +96,7 @@ export function createApp(db: Database) {
         message: "Registration successful",
       });
     } catch (error) {
-      console.log(error);
+      console.error(error);
       return res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -157,6 +161,7 @@ export function createApp(db: Database) {
           } catch (error) {
             // Log but don't fail login if history sync fails
             console.error(`Failed to sync history for date ${result.date}:`, error);
+            console.error("Error details:", error instanceof Error ? error.message : String(error));
           }
         }
       }
@@ -171,7 +176,28 @@ export function createApp(db: Database) {
         message: "Login successful",
       });
     } catch (error) {
-      console.log(error);
+      console.error("Login error:", error);
+      console.error("Error type:", typeof error);
+      console.error("Error constructor:", error?.constructor?.name);
+
+      if (error instanceof Error) {
+        console.error("Error message:", error.message);
+        console.error("Stack trace:", error.stack);
+      } else if (error && typeof error === "object") {
+        console.error("Error object keys:", Object.keys(error));
+        console.error("Error object:", JSON.stringify(error, null, 2));
+
+        // For ErrorEvent or similar objects
+        if ("message" in error) {
+          console.error("Error.message:", (error as any).message);
+        }
+        if ("error" in error) {
+          console.error("Error.error:", (error as any).error);
+        }
+      } else {
+        console.error("Error (raw):", String(error));
+      }
+
       return res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -278,6 +304,13 @@ export function createApp(db: Database) {
         }
       } catch (error) {
         console.error("Error fetching user result:", error);
+
+        if (error instanceof Error) {
+          console.error("Error message:", error.message);
+          console.error("Stack trace:", error.stack);
+        } else if (error && typeof error === "object") {
+          console.error("Error object:", JSON.stringify(error, null, 2));
+        }
         // Don't fail the request if we can't fetch the result
       }
     }
@@ -328,7 +361,7 @@ export function createApp(db: Database) {
         success: true,
       });
     } catch (error) {
-      console.log(error);
+      console.error(error);
       return res.status(500).json({
         success: false,
         message: "Failed to submit result",
@@ -362,7 +395,7 @@ export function createApp(db: Database) {
         stats,
       });
     } catch (error) {
-      console.log(error);
+      console.error(error);
       return res.status(500).json({
         success: false,
         message: "Failed to fetch history",
@@ -380,13 +413,18 @@ export function createApp(db: Database) {
 
 // Initialize database based on environment
 function initializeDatabase(): Database {
+  const nodeEnv = process.env.NODE_ENV;
   const databaseUrl = process.env.DATABASE_URL;
 
+  // In development mode, always use in-memory database
+  if (nodeEnv === "development") {
+    return new StubDatabase();
+  }
+
+  // In production/other environments, use PostgreSQL if DATABASE_URL is set
   if (databaseUrl) {
-    console.log("Using PostgreSQL database");
     return new PostgresDatabase(databaseUrl);
   } else {
-    console.log("Using StubDatabase (in-memory) - set DATABASE_URL to use PostgreSQL");
     return new StubDatabase();
   }
 }

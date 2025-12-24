@@ -10,21 +10,13 @@ import { AuthModal } from "@/components/auth-modal";
 import { useGameState } from "@/hooks/use-game-state";
 import { useLongPress } from "@/hooks/use-long-press";
 import { SquareInput } from "@/components/square-input";
-import {
-  HelpCircle,
-  Database,
-  CircleUserRound,
-  UserRound,
-  ChartColumnBig,
-  LogOut,
-} from "lucide-react";
+import { CircleUserRound, UserRound, ChartColumnBig, LogOut } from "lucide-react";
 import { getGameNumber, NUM_GUESSES, calculateRevealedLetterCount } from "@shared/lib/game-utils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link } from "wouter";
@@ -228,20 +220,13 @@ export default function Game({ difficulty }: GameProps) {
   return (
     <div className="bg-white font-game min-h-screen">
       {/* Header */}
-      <header className="text-center py-3 px-4 max-w-[420px] mx-auto" data-testid="game-header">
+      <header className="text-center py-3 px-4 max-w-[440px] mx-auto" data-testid="game-header">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-bold text-dark">
-              Crosses {difficulty !== "practice" ? `#${puzzleNumber}` : ""}
-            </h1>
-            <button
-              {...helpButtonHandlers}
-              className="text-gray-500 hover:text-gray-700 transition-colors"
-              data-testid="help-button"
-              aria-label="How to play"
-            >
-              <HelpCircle className="w-4 h-4" />
-            </button>
+            <div className="flex items-end gap-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-dark">Crosses</h1>
+              <h2 className="pb-1">{difficulty !== "practice" ? `#${puzzleNumber}` : ""}</h2>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {Auth.isAuthenticated() && (

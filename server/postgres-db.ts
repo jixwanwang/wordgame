@@ -1,8 +1,9 @@
 /**
  * PostgreSQL implementation of the Database interface using Drizzle ORM
  */
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { Pool } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pkg from "pg";
+const { Pool } = pkg;
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { users, results } from "./schema.js";
@@ -12,14 +13,19 @@ const SALT_ROUNDS = 10;
 
 export class PostgresDatabase implements Database {
   private db;
-  private pool: Pool;
+  private pool: typeof Pool.prototype;
 
   constructor(connectionString: string) {
     if (!connectionString) {
       throw new Error("DATABASE_URL is required");
     }
 
+    // Create pool and drizzle instance using standard node-postgres
     this.pool = new Pool({ connectionString });
+    this.pool.on("error", (err) => {
+      console.error("Database pool error:", err);
+    });
+
     this.db = drizzle(this.pool);
   }
 
@@ -91,31 +97,36 @@ export class PostgresDatabase implements Database {
   }
 
   async getPuzzleResult(username: string, date: string): Promise<PuzzleResult | null> {
-    const lowerUsername = username.toLowerCase();
+    try {
+      const lowerUsername = username.toLowerCase();
 
-    const result = await this.db
-      .select()
-      .from(results)
-      .where(and(eq(results.username, lowerUsername), eq(results.date, date)))
-      .limit(1);
+      const result = await this.db
+        .select()
+        .from(results)
+        .where(and(eq(results.username, lowerUsername), eq(results.date, date)))
+        .limit(1);
 
-    if (result.length === 0) {
-      return null;
+      if (result.length === 0) {
+        return null;
+      }
+
+      const row = result[0];
+
+      // Parse guesses from JSON string
+      const guesses = JSON.parse(row.guesses);
+
+      return {
+        username: row.username,
+        date: row.date,
+        guesses,
+        numGuesses: row.numGuesses,
+        won: row.won,
+        submittedAt: row.submittedAt,
+      };
+    } catch (error) {
+      console.error(`Error in getPuzzleResult for user ${username}, date ${date}:`, error);
+      throw error;
     }
-
-    const row = result[0];
-
-    // Parse guesses from JSON string
-    const guesses = JSON.parse(row.guesses);
-
-    return {
-      username: row.username,
-      date: row.date,
-      guesses,
-      numGuesses: parseInt(row.numGuesses, 10),
-      won: row.won,
-      submittedAt: row.submittedAt,
-    };
   }
 
   async getAllPuzzleResults(username: string): Promise<PuzzleResult[]> {
@@ -130,7 +141,7 @@ export class PostgresDatabase implements Database {
       username: row.username,
       date: row.date,
       guesses: JSON.parse(row.guesses),
-      numGuesses: parseInt(row.numGuesses, 10),
+      numGuesses: row.numGuesses,
       won: row.won,
       submittedAt: row.submittedAt,
     }));
@@ -146,7 +157,7 @@ export class PostgresDatabase implements Database {
 
     // Serialize guesses to JSON
     const guessesJson = JSON.stringify(guesses);
-    const numGuesses = guesses.length.toString();
+    const numGuesses = guesses.length;
 
     // Insert only if not exists (do not overwrite existing records)
     await this.db

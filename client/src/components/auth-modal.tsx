@@ -39,8 +39,8 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
       errors.username = "Username is required";
     } else if (username.length < 3) {
       errors.username = "Username must be at least 3 characters";
-    } else if (username.length > 24) {
-      errors.username = "Username must be at most 24 characters";
+    } else if (username.length > 16) {
+      errors.username = "Username must be at most 16 characters";
     } else if (!/^[a-zA-Z0-9]+$/.test(username)) {
       errors.username = "Username can only contain letters and numbers (a-z, A-Z, 0-9)";
     }
@@ -135,7 +135,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
               placeholder="choose a name"
               required
               minLength={3}
-              maxLength={24}
+              maxLength={16}
               disabled={loading}
               autoComplete="username"
               className={fieldErrors.username ? "border-red-500" : ""}
