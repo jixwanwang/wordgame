@@ -13,6 +13,7 @@ import {
 import { getPuzzleByDate, getTodaysPuzzle } from "./puzzles.js";
 import { convertHistoryToResults } from "./history-converter.js";
 import type { GameHistory } from "../lib/schema.js";
+import { computeStatsFromHistory } from "./stats.js";
 
 /**
  * Create and configure the Express app with dependencies injected
@@ -73,12 +74,7 @@ export function createApp(db: Database) {
         const results = convertHistoryToResults(history);
         for (const result of results) {
           try {
-            await db.insertPuzzleResult(
-              username,
-              result.date,
-              result.guesses,
-              result.won
-            );
+            await db.insertPuzzleResult(username, result.date, result.guesses, result.won);
           } catch (error) {
             // Log but don't fail registration if history sync fails
             console.error(`Failed to sync history for date ${result.date}:`, error);
@@ -157,12 +153,7 @@ export function createApp(db: Database) {
         const results = convertHistoryToResults(history);
         for (const result of results) {
           try {
-            await db.insertPuzzleResult(
-              username,
-              result.date,
-              result.guesses,
-              result.won
-            );
+            await db.insertPuzzleResult(username, result.date, result.guesses, result.won);
           } catch (error) {
             // Log but don't fail login if history sync fails
             console.error(`Failed to sync history for date ${result.date}:`, error);
@@ -191,11 +182,11 @@ export function createApp(db: Database) {
   /**
    * GET /api/puzzle
    * Fetch the puzzle of the day (optionally authenticated)
-   * Query params: date? (optional YYYY-MM-DD format, defaults to today)
+   * Query params: date? (optional MM-DD-YYYY format, defaults to today), difficulty? (normal or hard, defaults to normal)
    * Headers: Authorization: Bearer <token> (optional)
    * Response: {
    *   id: string,
-   *   date: string,
+   *   date: string (MM-DD-YYYY),
    *   words: string[],
    *   grid: GameGrid,
    *   wordPositions: Record<string, [number, number][]>,
@@ -205,26 +196,42 @@ export function createApp(db: Database) {
    */
   app.get("/api/puzzle", optionalAuthenticateToken, async (req: Request, res: Response) => {
     const requestedDate = req.query.date as string | undefined;
+    const difficulty = (req.query.difficulty as "normal" | "hard" | undefined) || "normal";
 
     // Fetch puzzle based on date or get today's puzzle
     let puzzle;
     let puzzleDate;
 
     if (requestedDate) {
-      // Validate date format (YYYY-MM-DD)
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
+      // Validate date format (MM-DD-YYYY)
+      if (!/^\d{2}-\d{2}-\d{4}$/.test(requestedDate)) {
         return res.status(400).json({
           success: false,
-          message: "Invalid date format. Use YYYY-MM-DD",
+          message: "Invalid date format. Use MM-DD-YYYY",
         });
       }
-      puzzle = getPuzzleByDate(requestedDate);
+      const today = new Date();
+      const [month, day, year] = requestedDate.split("-");
+      if (
+        parseInt(year) > today.getFullYear() ||
+        (parseInt(year) === today.getFullYear() && parseInt(month) > today.getMonth() + 1) ||
+        (parseInt(year) === today.getFullYear() &&
+          parseInt(month) === today.getMonth() + 1 &&
+          parseInt(day) > today.getDate())
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "cannot get puzzle for the future",
+        });
+      }
+
+      puzzle = getPuzzleByDate(requestedDate, difficulty);
       puzzleDate = requestedDate;
     } else {
-      puzzle = getTodaysPuzzle();
-      // Get today's date in YYYY-MM-DD format
+      puzzle = getTodaysPuzzle(difficulty);
+      // Get today's date in MM-DD-YYYY format
       const today = new Date();
-      puzzleDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      puzzleDate = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}-${today.getFullYear()}`;
     }
 
     if (puzzle === null) {
@@ -282,11 +289,11 @@ export function createApp(db: Database) {
    * POST /api/submit
    * Submit a result for the puzzle of the day (requires authentication)
    * Request headers: Authorization: Bearer <token>
-   * Request body: { puzzleId: string, guesses: string[] }
+   * Request body: { puzzleId: string, guesses: string[], won: boolean }
    * Response: { success: boolean, message?: string }
    */
   app.post("/api/submit", authenticateToken, async (req: Request, res: Response) => {
-    const { puzzleId, guesses } = req.body;
+    const { puzzleId, guesses, won } = req.body;
 
     // Get username from JWT token
     const username = req.user?.username;
@@ -299,15 +306,15 @@ export function createApp(db: Database) {
     }
 
     // Validation
-    if (puzzleId == null || guesses == null) {
+    if (puzzleId == null || guesses == null || won == null) {
       return res.status(400).json({
         success: false,
-        message: "puzzleId is required",
+        message: "puzzleId, guesses, and won are required",
       });
     }
 
     try {
-      // Extract date from puzzleId (format: puzzle_YYYY_MM_DD)
+      // Extract date from puzzleId (format: puzzle_MM_DD_YYYY)
       const datePart = puzzleId.replace("puzzle_", "").replace(/_/g, "-");
 
       // TODO: Validate words against puzzle
@@ -315,7 +322,7 @@ export function createApp(db: Database) {
       // TODO: Calculate actual ranking
 
       // Store result in database
-      await db.insertPuzzleResult(username, datePart, guesses, guesses.length < 15);
+      await db.insertPuzzleResult(username, datePart, guesses, won);
 
       return res.json({
         success: true,
@@ -348,9 +355,11 @@ export function createApp(db: Database) {
     try {
       const results = await db.getAllPuzzleResults(username);
 
+      const stats = computeStatsFromHistory(results);
+
       return res.json({
         success: true,
-        results,
+        stats,
       });
     } catch (error) {
       console.log(error);

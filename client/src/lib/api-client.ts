@@ -137,8 +137,11 @@ export const API = {
   },
 
   // Get puzzle (optionally with auth)
-  async getPuzzle(date?: string) {
-    const params = date ? `?date=${date}` : "";
+  async getPuzzle(date?: string, difficulty?: "normal" | "hard") {
+    const params = new URLSearchParams();
+    if (date) params.append("date", date);
+    if (difficulty) params.append("difficulty", difficulty);
+    const queryString = params.toString() ? `?${params.toString()}` : "";
     return apiRequest<{
       id: string;
       date: string;
@@ -155,17 +158,17 @@ export const API = {
         won: boolean;
         submittedAt: Date;
       };
-    }>(`/api/puzzle${params}`);
+    }>(`/api/puzzle${queryString}`);
   },
 
   // Submit puzzle result (requires auth)
-  async submitResult(puzzleId: string, guesses: string[]) {
+  async submitResult(puzzleId: string, guesses: string[], won: boolean) {
     return apiRequest<{
       success: boolean;
       message?: string;
     }>("/api/submit", {
       method: "POST",
-      body: JSON.stringify({ puzzleId, guesses }),
+      body: JSON.stringify({ puzzleId, guesses, won }),
     });
   },
 

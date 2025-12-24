@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { getGameHistory } from "@/lib/game-storage";
+import { parseDate } from "@shared/lib/game-utils";
 
 interface DebugHistoryModalProps {
   open: boolean;
@@ -21,11 +22,6 @@ export function DebugHistoryModal({ open, onOpenChange }: DebugHistoryModalProps
           const sortedGames: Record<string, any> = {};
           const gameEntries = Object.entries(history.games);
           gameEntries.sort((a, b) => {
-            // Parse dates in MM-DD-YYYY format
-            const parseDate = (dateStr: string) => {
-              const [month, day, year] = dateStr.split("-").map(Number);
-              return new Date(year, month - 1, day);
-            };
             const dateA = parseDate(a[0]);
             const dateB = parseDate(b[0]);
             return dateB.getTime() - dateA.getTime(); // Reverse chronological

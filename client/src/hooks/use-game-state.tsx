@@ -4,26 +4,7 @@ import { Grid8x8 } from "@shared/lib/grid";
 import { NUM_GUESSES } from "@shared/lib/game-utils";
 import { getPuzzlesByDifficulty, type Puzzle } from "@shared/lib/puzzles";
 import { getGameForDay, addGuess, completeGame, getCurrentStreak } from "@/lib/game-storage";
-
-function getTodaysPuzzle(difficulty: "normal" | "hard"): Puzzle {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  const year = now.getFullYear();
-  const todayDate = `${month}-${day}-${year}`;
-
-  const availablePuzzles = getPuzzlesByDifficulty(difficulty);
-  const todaysPuzzle = availablePuzzles.find((puzzle: Puzzle) => puzzle.date === todayDate);
-
-  if (!todaysPuzzle) {
-    console.log(
-      `No puzzle found for ${todayDate}, using fallback puzzle: ${availablePuzzles[0].date}`,
-    );
-    return availablePuzzles[0];
-  }
-
-  return todaysPuzzle;
-}
+import { API, Auth } from "@/lib/api-client";
 
 function getRandomPracticePuzzle(): Puzzle {
   const availablePuzzles = getPuzzlesByDifficulty("practice");
@@ -37,6 +18,7 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
 
   // State for current puzzle and loading
   const [currentPuzzle, setCurrentPuzzle] = useState<Puzzle | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Initialize game state
   const [gameState, setGameState] = useState<GameState>({
@@ -48,56 +30,84 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
     currentStreak: 0,
   });
 
-  // Load puzzle data from client-side
+  // Load puzzle data from server
   useEffect(() => {
-    // Clear the grid completely when switching modes
-    grid.clear();
+    const loadPuzzle = async () => {
+      // Clear the grid completely when switching modes
+      grid.clear();
+      setIsLoading(true);
 
-    const isPracticeMode = difficulty === "practice";
-    const puzzle = isPracticeMode ? getRandomPracticePuzzle() : getTodaysPuzzle(difficulty);
+      const isPracticeMode = difficulty === "practice";
 
-    // Guard against missing puzzle date
-    if (!puzzle.date) {
-      console.error("Puzzle data missing date property");
-      return;
-    }
+      try {
+        let puzzle: Puzzle;
 
-    setCurrentPuzzle(puzzle);
+        if (isPracticeMode) {
+          // For practice mode, use local random puzzle
+          puzzle = getRandomPracticePuzzle();
+        } else {
+          // For normal/hard mode, fetch from server
+          const response = await API.getPuzzle(undefined, difficulty);
+          puzzle = {
+            date: response.date,
+            words: response.words,
+            grid: response.grid,
+            wordPositions: response.wordPositions,
+          };
+        }
 
-    // Load puzzle into grid
-    grid.loadPuzzle(puzzle);
+        // Guard against missing puzzle date
+        if (!puzzle.date) {
+          console.error("Puzzle data missing date property");
+          setIsLoading(false);
+          return;
+        }
 
-    // For practice mode, skip saved state; for normal/hard, check for saved state
-    if (isPracticeMode) {
-      // Practice mode - always start fresh
-      setGameState({
-        totalGuessesRemaining: NUM_GUESSES,
-        gameStatus: "playing",
-        guessedLetters: [],
-        currentPuzzle: puzzle.date,
-        difficulty: difficulty,
-        currentStreak: 0,
-      });
-    } else {
-      // Check for saved game state
-      const savedState = getGameForDay(puzzle.date);
-      const currentStreak = getCurrentStreak();
+        setCurrentPuzzle(puzzle);
 
-      // Restore saved state
-      setGameState({
-        totalGuessesRemaining: savedState.guessesRemaining,
-        gameStatus: savedState.isComplete ? (savedState.wonGame ? "won" : "lost") : "playing",
-        guessedLetters: savedState.guessedLetters,
-        currentPuzzle: puzzle.date,
-        difficulty,
-        currentStreak: currentStreak,
-      });
+        // Load puzzle into grid
+        grid.loadPuzzle(puzzle);
 
-      // Restore revealed letters in grid
-      savedState.guessedLetters.forEach((letter) => {
-        grid.revealLetter(letter);
-      });
-    }
+        // For practice mode, skip saved state; for normal/hard, check for saved state
+        if (isPracticeMode) {
+          // Practice mode - always start fresh
+          setGameState({
+            totalGuessesRemaining: NUM_GUESSES,
+            gameStatus: "playing",
+            guessedLetters: [],
+            currentPuzzle: puzzle.date,
+            difficulty: difficulty,
+            currentStreak: 0,
+          });
+        } else {
+          // Check for saved game state
+          const savedState = getGameForDay(puzzle.date);
+          const currentStreak = getCurrentStreak();
+
+          // Restore saved state
+          setGameState({
+            totalGuessesRemaining: savedState.guessesRemaining,
+            gameStatus: savedState.isComplete ? (savedState.wonGame ? "won" : "lost") : "playing",
+            guessedLetters: savedState.guessedLetters,
+            currentPuzzle: puzzle.date,
+            difficulty,
+            currentStreak: currentStreak,
+          });
+
+          // Restore revealed letters in grid
+          savedState.guessedLetters.forEach((letter) => {
+            grid.revealLetter(letter);
+          });
+        }
+
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Failed to load puzzle:", error);
+        setIsLoading(false);
+      }
+    };
+
+    loadPuzzle();
   }, [grid, difficulty]);
 
   const makeGuess = useCallback(
@@ -159,10 +169,23 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
         if (!isPracticeMode && currentPuzzle.date) {
           const isNowComplete = newState.gameStatus === "won" || newState.gameStatus === "lost";
 
-          addGuess(currentPuzzle.date, newGuessedLetters, newState.totalGuessesRemaining);
+          addGuess(currentPuzzle.date, newGuessedLetters, newState.totalGuessesRemaining, guess.value);
           if (isNowComplete) {
             const updatedStreak = completeGame(currentPuzzle.date, newState.gameStatus === "won");
             newState.currentStreak = updatedStreak;
+
+            // Submit result to API if user is authenticated
+            if (Auth.isAuthenticated()) {
+              const savedGame = getGameForDay(currentPuzzle.date);
+              const guesses = savedGame.guesses || [];
+              const puzzleId = `puzzle_${currentPuzzle.date.replace(/-/g, "_")}`;
+              const wonGame = newState.gameStatus === "won";
+
+              API.submitResult(puzzleId, guesses, wonGame).catch((error) => {
+                console.error("Failed to submit result to API:", error);
+                // Don't block the game completion if API submission fails
+              });
+            }
           }
         }
 
@@ -232,5 +255,6 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
     isLetterRevealed,
     getKeyboardLetterState,
     currentPuzzle,
+    isLoading,
   };
 }

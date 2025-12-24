@@ -21,6 +21,7 @@ export interface SavedGameState {
   date: string;
   guessesRemaining: number;
   guessedLetters: string[];
+  guesses?: string[]; // Array of guess inputs (letters or words) - optional for backward compatibility
   isComplete: boolean;
   wonGame: boolean;
 }

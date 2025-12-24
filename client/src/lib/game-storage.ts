@@ -1,10 +1,11 @@
-import { NUM_GUESSES, parseDate } from "@shared/lib/game-utils";
+import { NUM_GUESSES, parseDate, areConsecutiveDays } from "@shared/lib/game-utils";
 import type { SavedGameState, GameHistory } from "@shared/lib/schema";
 
-export const getDefaultGameState = (date: string) => ({
+export const getDefaultGameState = (date: string): SavedGameState => ({
   date,
   guessesRemaining: NUM_GUESSES,
   guessedLetters: [],
+  guesses: [],
   isComplete: false,
   wonGame: false,
 });
@@ -37,7 +38,12 @@ export function getGameForDay(date: string): SavedGameState {
 }
 
 // Action: Add a guess for a day
-export function addGuess(date: string, letters: string[], guessesRemaining: number): void {
+export function addGuess(
+  date: string,
+  letters: string[],
+  guessesRemaining: number,
+  guessInput: string,
+): void {
   const history = getGameHistory();
   const existingGame = history.games[date];
 
@@ -45,12 +51,14 @@ export function addGuess(date: string, letters: string[], guessesRemaining: numb
     // Update existing game
     existingGame.guessedLetters = [...existingGame.guessedLetters, ...letters];
     existingGame.guessesRemaining = guessesRemaining;
+    existingGame.guesses = [...(existingGame.guesses ?? []), guessInput];
   } else {
     // Create new game state
     history.games[date] = {
       date,
       guessesRemaining,
       guessedLetters: [...letters],
+      guesses: [guessInput],
       isComplete: false,
       wonGame: false,
     };
@@ -126,23 +134,7 @@ export function calculateStreakFromHistory(history: GameHistory): number {
       previousDate = currentDate;
     } else {
       // Check if this game is the day before the previous game
-      const prevDateNormalized = new Date(
-        previousDate.getFullYear(),
-        previousDate.getMonth(),
-        previousDate.getDate(),
-      );
-      const currDateNormalized = new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth(),
-        currentDate.getDate(),
-      );
-
-      const timeDiff = prevDateNormalized.getTime() - currDateNormalized.getTime();
-      // Calculate days difference, accounting for DST (23-25 hour days)
-      const daysDiff = Math.round(timeDiff / (1000 * 60 * 60 * 24));
-      const isConsecutiveDay = daysDiff === 1;
-
-      if (isConsecutiveDay) {
+      if (areConsecutiveDays(previousDate, currentDate)) {
         streak += 1;
         previousDate = currentDate;
       } else {

@@ -10,9 +10,23 @@ import { AuthModal } from "@/components/auth-modal";
 import { useGameState } from "@/hooks/use-game-state";
 import { useLongPress } from "@/hooks/use-long-press";
 import { SquareInput } from "@/components/square-input";
-import { HelpCircle, Database } from "lucide-react";
+import {
+  HelpCircle,
+  Database,
+  CircleUserRound,
+  UserRound,
+  ChartColumnBig,
+  LogOut,
+} from "lucide-react";
 import { getGameNumber, NUM_GUESSES, calculateRevealedLetterCount } from "@shared/lib/game-utils";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Link } from "wouter";
 import { isValidWord } from "@shared/lib/all_words";
 import { API, Auth } from "@/lib/api-client";
@@ -34,6 +48,7 @@ export default function Game({ difficulty }: GameProps) {
     getKeyboardLetterState,
     currentPuzzle,
     resetGame,
+    isLoading,
   } = useGameState(difficulty);
 
   const [inputValue, setInputValue] = useState("");
@@ -199,61 +214,80 @@ export default function Game({ difficulty }: GameProps) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleGuess, handleBackspaceClick, gameState.gameStatus, showToast, showAuthModal]);
 
-  if (currentPuzzle == null) {
-    return null;
+  if (isLoading || currentPuzzle == null) {
+    return (
+      <div className="bg-white font-game min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-gray-600">Loading puzzle...</div>
+        </div>
+      </div>
+    );
   }
   const puzzleNumber = getGameNumber(currentPuzzle.date);
 
   return (
     <div className="bg-white font-game min-h-screen">
       {/* Header */}
-      <header className="text-center py-3" data-testid="game-header">
-        <div className="flex items-center justify-center gap-3">
-          <div className="flex items-center gap-1">
+      <header className="text-center py-3 px-4 max-w-[420px] mx-auto" data-testid="game-header">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
             <h1 className="text-2xl sm:text-3xl font-bold text-dark">
               Crosses {difficulty !== "practice" ? `#${puzzleNumber}` : ""}
             </h1>
+            <button
+              {...helpButtonHandlers}
+              className="text-gray-500 hover:text-gray-700 transition-colors"
+              data-testid="help-button"
+              aria-label="How to play"
+            >
+              <HelpCircle className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
             {Auth.isAuthenticated() && (
               <div className="flex items-center gap-2 ml-2">
-                <span className="text-sm text-gray-600">({Auth.getUsername()})</span>
-                <button
-                  onClick={() => {
-                    Auth.logout();
-                    window.location.reload();
-                  }}
-                  className="text-xs text-gray-500 hover:text-gray-700 underline"
-                >
-                  logout
-                </button>
+                <span className="text-sm text-gray-600">{Auth.getUsername()}</span>
               </div>
             )}
+            {Auth.isAuthenticated() ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="text-gray-500 hover:text-gray-700 transition-colors"
+                    data-testid="user-menu-button"
+                    aria-label="User menu"
+                  >
+                    <CircleUserRound className="w-6 h-6" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleFetchHistory}>
+                    <ChartColumnBig className="w-4 h-4 mr-2" />
+                    Stats
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      Auth.logout();
+                      window.location.reload();
+                    }}
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+                data-testid="login-button"
+                aria-label="Login"
+              >
+                <UserRound className="w-6 h-6" />
+              </button>
+            )}
           </div>
-          <button
-            {...helpButtonHandlers}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
-            data-testid="help-button"
-            aria-label="How to play"
-          >
-            <HelpCircle className="w-6 h-6" />
-          </button>
-          {Auth.isAuthenticated() && (
-            <button
-              onClick={handleFetchHistory}
-              className="text-gray-500 hover:text-gray-700 transition-colors"
-              data-testid="fetch-history-button"
-              aria-label="Fetch history from database"
-            >
-              <Database className="w-6 h-6" />
-            </button>
-          )}
-          {/* <button
-            onClick={() => setShowDebugHistory(true)}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-            data-testid="debug-button"
-            aria-label="Debug history"
-          >
-            <Bug className="w-5 h-5" />
-          </button> */}
+
           {difficulty === "practice" && (
             <span
               className="text-xs text-gray-500 px-2 py-1 rounded-sm bg-blue-300 font-medium"
@@ -273,7 +307,6 @@ export default function Game({ difficulty }: GameProps) {
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         onSuccess={(username) => {
-          console.log("Logged in as:", username);
           // Show how to play modal after successful auth for first-time users
           const hasHistory = localStorage.getItem("wordgame-history");
           if (!hasHistory) {

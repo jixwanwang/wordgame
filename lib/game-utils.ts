@@ -68,3 +68,28 @@ export function calculateRevealedLetterCount(words: string[], revealedLetters: s
 export function getTotalLetterCount(words: string[]): number {
   return words.reduce((sum, word) => sum + word.length, 0);
 }
+
+/**
+ * Check if two dates are consecutive days (date2 is the day before date1)
+ * @param date1 - The later date
+ * @param date2 - The earlier date (should be day before date1)
+ * @returns true if date2 is exactly one day before date1
+ */
+export function areConsecutiveDays(date1: Date, date2: Date): boolean {
+  // Normalize dates to midnight to avoid time-of-day issues
+  const date1Normalized = new Date(
+    date1.getFullYear(),
+    date1.getMonth(),
+    date1.getDate(),
+  );
+  const date2Normalized = new Date(
+    date2.getFullYear(),
+    date2.getMonth(),
+    date2.getDate(),
+  );
+
+  const timeDiff = date1Normalized.getTime() - date2Normalized.getTime();
+  // Calculate days difference, accounting for DST (23-25 hour days)
+  const daysDiff = Math.round(timeDiff / (1000 * 60 * 60 * 24));
+  return daysDiff === 1;
+}
