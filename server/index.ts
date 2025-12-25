@@ -18,6 +18,7 @@ import {
 import { getPuzzleByDate, getTodaysPuzzle } from "./puzzles.js";
 import { convertHistoryToResults } from "./history-converter.js";
 import { computeStatsFromHistory } from "./stats.js";
+import { getTodayInPacificTime, getNowInPacificTime } from "./time-utils.js";
 
 /**
  * Create and configure the Express app with dependencies injected
@@ -236,7 +237,7 @@ export function createApp(db: Database) {
           message: "Invalid date format. Use MM-DD-YYYY",
         });
       }
-      const today = new Date();
+      const today = getNowInPacificTime();
       const [month, day, year] = requestedDate.split("-");
       if (
         parseInt(year) > today.getFullYear() ||
@@ -255,9 +256,8 @@ export function createApp(db: Database) {
       puzzleDate = requestedDate;
     } else {
       puzzle = getTodaysPuzzle(difficulty);
-      // Get today's date in MM-DD-YYYY format
-      const today = new Date();
-      puzzleDate = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}-${today.getFullYear()}`;
+      // Get today's date in Pacific Time in MM-DD-YYYY format
+      puzzleDate = getTodayInPacificTime();
     }
 
     if (puzzle === null) {

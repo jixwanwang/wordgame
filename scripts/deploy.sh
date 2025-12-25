@@ -45,20 +45,13 @@ echo ""
 # Directories and files to copy
 DIRS_TO_COPY=(
     "server"
-    "client"
     "lib"
     "scripts"
 )
 
 FILES_TO_COPY=(
-    "package.json"
-    "package-lock.json"
     "tsconfig.json"
     "drizzle.config.ts"
-    "vite.config.ts"
-    "index.html"
-    "tailwind.config.ts"
-    "postcss.config.mjs"
 )
 
 echo -e "${YELLOW}Creating remote directory...${NC}"
@@ -111,10 +104,9 @@ echo -e "${GREEN}=== Deployment Complete ===${NC}"
 echo ""
 echo "Files copied to VM at: ~/$REMOTE_DIR"
 echo ""
-echo "To SSH into your VM:"
+echo "To complete setup, SSH into your VM and run the setup script:"
 echo -e "${YELLOW}  ./scripts/ssh.sh${NC}"
 echo ""
 echo "Then on the VM, run:"
-echo -e "${YELLOW}  cd $REMOTE_DIR${NC}"
-echo -e "${YELLOW}  npm install${NC}"
-echo -e "${YELLOW}  npm run build${NC}"
+echo -e "${YELLOW}  cd $REMOTE_DIR/scripts${NC}"
+echo -e "${YELLOW}  ./setup-vm.sh${NC}"

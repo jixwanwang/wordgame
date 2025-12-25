@@ -9,13 +9,13 @@ echo "=== Wordgame Server Setup ==="
 echo ""
 
 # Check if running on the VM
-if [ ! -d ~/wordgame ]; then
-    echo "Error: ~/wordgame directory not found"
+if [ ! -d ~/wordgame/server ]; then
+    echo "Error: ~/wordgame/server directory not found"
     echo "Please deploy your code first using: ./scripts/deploy.sh"
     exit 1
 fi
 
-cd ~/wordgame
+cd ~/wordgame/server
 
 # Install Node.js if not present
 if ! command -v node &> /dev/null; then
@@ -33,7 +33,7 @@ fi
 # Install dependencies
 echo ""
 echo "=== Installing dependencies ==="
-npm install
+npm install -dd
 
 # Build application
 echo ""

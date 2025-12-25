@@ -1,6 +1,7 @@
 import PUZZLES_NORMAL from "../lib/puzzles_normal.js";
 import PUZZLES_HARD from "../lib/puzzles_hard.js";
 import type { Puzzle, Difficulty } from "../lib/puzzles_types.js";
+import { getTodayInPacificTime } from "./time-utils.js";
 
 function getPuzzleSet(difficulty: Difficulty) {
   switch (difficulty) {
@@ -28,17 +29,12 @@ export function getPuzzleByDate(date: string, difficulty: Difficulty = "normal")
 }
 
 /**
- * Get today's puzzle
+ * Get today's puzzle (based on Pacific Time)
  * @param difficulty Puzzle difficulty (normal or hard)
  * @returns Puzzle for today if available, null otherwise
  */
 export function getTodaysPuzzle(difficulty: Difficulty = "normal"): Puzzle | null {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-  const dateString = `${month}-${day}-${year}`;
-
+  const dateString = getTodayInPacificTime();
   return getPuzzleByDate(dateString, difficulty);
 }
 

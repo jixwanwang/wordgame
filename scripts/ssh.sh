@@ -12,7 +12,7 @@ else
 fi
 
 # Configuration from .env (with defaults)
-PROJECT_ID="${GCP_PROJECT_ID:-project-ce31194e-b92f-4b22-9e0}"
+PROJECT_ID="${GCP_PROJECT_ID:whatever}"
 VM_NAME="${GCP_VM_NAME}"
 ZONE="${GCP_ZONE:-us-west1-b}"
 
