@@ -319,4 +319,4 @@ export default PUZZLES;
 }
 
 // console.log(UNCOMMON_DICTIONARY[4].length, UNCOMMON_DICTIONARY[5].length, UNCOMMON_DICTIONARY[6].length, UNCOMMON_DICTIONARY[7].length);
-generatePuzzlesForDateRange("12-15-2025", "normal", 60);
+generatePuzzlesForDateRange("12-25-2025", "normal", 60);
