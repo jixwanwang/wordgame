@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import express from "express";
+import cors from "cors";
 import type { Request, Response } from "express";
 import type { Database } from "./db.js";
 import { StubDatabase } from "./db.js";
@@ -25,6 +26,36 @@ import { getTodayInPacificTime, getNowInPacificTime } from "./time-utils.js";
  */
 export function createApp(db: Database) {
   const app = express();
+
+  // CORS configuration
+  // Allow requests from Cloudflare Workers frontends
+  const allowedOrigins = [
+    "https://crosses-stg.jixuan-wang.workers.dev", // Staging
+    "https://crosses.jixuan-wang.workers.dev", // Production (if exists)
+    "https://crosses.io", // Production domain
+    "http://localhost:5173", // Local development
+    "http://localhost:3000", // Local development
+  ];
+
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps, curl, etc.)
+        if (!origin) {
+          return callback(null, true);
+        }
+
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error(`Origin ${origin} not allowed by CORS`));
+        }
+      },
+      credentials: true, // Allow cookies and authorization headers
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+    }),
+  );
 
   // Middleware
   app.use(express.json());
@@ -418,13 +449,16 @@ function initializeDatabase(): Database {
 
   // In development mode, always use in-memory database
   if (nodeEnv === "development") {
+    console.log("using stub database");
     return new StubDatabase();
   }
 
   // In production/other environments, use PostgreSQL if DATABASE_URL is set
   if (databaseUrl) {
+    console.log("got database url", databaseUrl);
     return new PostgresDatabase(databaseUrl);
   } else {
+    console.log("using stub database");
     return new StubDatabase();
   }
 }

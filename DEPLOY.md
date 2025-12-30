@@ -112,6 +112,125 @@ gcloud compute firewall-rules create allow-api \
   --project=project-ce31194e-b92f-4b22-9e0
 ```
 
+### Required VM Scopes (CRITICAL for Cloud SQL)
+
+**Why scopes are needed**: Even with correct IAM permissions (`cloudsql.client` role), the VM needs OAuth scopes to access Cloud SQL. Without the correct scopes, the Cloud SQL Proxy will fail with `ACCESS_TOKEN_SCOPE_INSUFFICIENT` errors.
+
+**Check current scopes**:
+```bash
+gcloud compute instances describe wordgame \
+  --zone=us-west1-b \
+  --project=project-ce31194e-b92f-4b22-9e0 \
+  --format="get(serviceAccounts[0].scopes)"
+```
+
+**Add Cloud SQL scope** (requires VM restart):
+```bash
+# Stop the VM
+gcloud compute instances stop wordgame \
+  --zone=us-west1-b \
+  --project=project-ce31194e-b92f-4b22-9e0
+
+# Update scopes to include Cloud SQL access
+gcloud compute instances set-service-account wordgame \
+  --zone=us-west1-b \
+  --project=project-ce31194e-b92f-4b22-9e0 \
+  --scopes=https://www.googleapis.com/auth/cloud-platform
+
+# Start the VM
+gcloud compute instances start wordgame \
+  --zone=us-west1-b \
+  --project=project-ce31194e-b92f-4b22-9e0
+```
+
+**After VM starts**, restart Cloud SQL Proxy:
+```bash
+# SSH to VM
+./scripts/ssh.sh
+
+# Restart the proxy service
+sudo systemctl restart cloud-sql-proxy
+
+# Verify it's working
+sudo journalctl -u cloud-sql-proxy -n 20
+```
+
+**Note**: The `cloud-platform` scope gives full access to all Google Cloud services. For minimal permissions, you can use `--scopes=https://www.googleapis.com/auth/sqlservice.admin` instead, but you'll need to include other required scopes (logging, monitoring, etc.) as a comma-separated list.
+
+### Static IP Address (Recommended for Production)
+
+**Why you need a static IP**: By default, GCP VMs have **ephemeral** external IPs that change whenever you **stop and start** the VM. If you're using a domain name (like `api.crosses.io`), you need a **static IP** so the DNS A record doesn't become outdated.
+
+**What changes the IP**:
+- ✅ **Stop → Start**: IP changes (ephemeral IP is released and reassigned)
+- ❌ **Restart/Reboot**: IP stays the same (just reboots the OS)
+
+**Check current IP type**:
+```bash
+gcloud compute addresses list \
+  --project=project-ce31194e-b92f-4b22-9e0 \
+  --filter="name:wordgame"
+```
+
+**Reserve a static IP**:
+```bash
+# 1. Reserve a static IP address
+gcloud compute addresses create wordgame-ip \
+  --region=us-west1 \
+  --project=project-ce31194e-b92f-4b22-9e0
+
+# 2. Get the reserved IP address
+gcloud compute addresses describe wordgame-ip \
+  --region=us-west1 \
+  --project=project-ce31194e-b92f-4b22-9e0 \
+  --format="get(address)"
+
+# 3. Stop the VM (if running)
+gcloud compute instances stop wordgame \
+  --zone=us-west1-b \
+  --project=project-ce31194e-b92f-4b22-9e0
+
+# 4. Remove the ephemeral IP
+gcloud compute instances delete-access-config wordgame \
+  --zone=us-west1-b \
+  --project=project-ce31194e-b92f-4b22-9e0 \
+  --access-config-name="External NAT"
+
+# 5. Assign the static IP to the VM
+gcloud compute instances add-access-config wordgame \
+  --zone=us-west1-b \
+  --project=project-ce31194e-b92f-4b22-9e0 \
+  --access-config-name="External NAT" \
+  --address=$(gcloud compute addresses describe wordgame-ip --region=us-west1 --project=project-ce31194e-b92f-4b22-9e0 --format="get(address)")
+
+# 6. Start the VM
+gcloud compute instances start wordgame \
+  --zone=us-west1-b \
+  --project=project-ce31194e-b92f-4b22-9e0
+```
+
+**Update your DNS**:
+After assigning the static IP, update your DNS A record to point to this IP:
+- Log into your DNS provider (e.g., Cloudflare)
+- Update the A record for `api.crosses.io` to point to the static IP
+- Wait for DNS propagation (usually a few minutes)
+
+**Verify the static IP**:
+```bash
+# Check current IP
+gcloud compute instances describe wordgame \
+  --zone=us-west1-b \
+  --project=project-ce31194e-b92f-4b22-9e0 \
+  --format="get(networkInterfaces[0].accessConfigs[0].natIP)"
+
+# Verify it's static (should show your wordgame-ip)
+gcloud compute addresses list \
+  --project=project-ce31194e-b92f-4b22-9e0 \
+  --filter="users:wordgame"
+```
+
+**Cost**: Static IPs cost approximately $3/month when the VM is stopped, but are free when attached to a running VM.
+
 ---
 
 ## Configuration
