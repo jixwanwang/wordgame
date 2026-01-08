@@ -3,12 +3,11 @@ import { useState, useCallback, useEffect } from "react";
 import { CrosswordGrid } from "@/components/crossword-grid";
 import { GameStats } from "@/components/game-stats";
 import { GameKeyboard } from "@/components/game-keyboard";
-import { HowToPlayModal } from "@/components/how-to-play-modal";
 import { DebugHistoryModal } from "@/components/debug-history-modal";
 import { GameOverStats } from "@/components/game-over-stats";
 import { AuthModal } from "@/components/auth-modal";
+import { StatsModal } from "@/components/stats-modal";
 import { useGameState } from "@/hooks/use-game-state";
-import { useLongPress } from "@/hooks/use-long-press";
 import { SquareInput } from "@/components/square-input";
 import { CircleUserRound, UserRound, ChartColumnBig, LogOut } from "lucide-react";
 import { getGameNumber, NUM_GUESSES, calculateRevealedLetterCount } from "@shared/lib/game-utils";
@@ -44,13 +43,13 @@ export default function Game({ difficulty }: GameProps) {
   } = useGameState(difficulty);
 
   const [inputValue, setInputValue] = useState("");
-  const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [showDebugHistory, setShowDebugHistory] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showStatsModal, setShowStatsModal] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  // Show auth modal if not logged in, or show how to play modal for first-time users
+  // Show auth modal if not logged in
   useEffect(() => {
     const checkAuth = async () => {
       // Check if user is authenticated
@@ -70,14 +69,6 @@ export default function Game({ difficulty }: GameProps) {
         }, 500);
         return;
       }
-
-      // If authenticated and token valid, show how to play for first-time users
-      const hasHistory = localStorage.getItem("wordgame-history");
-      if (!hasHistory) {
-        setTimeout(() => {
-          setShowHowToPlay(true);
-        }, 1000);
-      }
     };
 
     checkAuth();
@@ -96,20 +87,9 @@ export default function Game({ difficulty }: GameProps) {
     }, 1500);
   }, []);
 
-  // Long press handlers for help button
-  const helpButtonHandlers = useLongPress({
-    onShortPress: () => setShowHowToPlay(true),
-    onLongPress: () => setShowDebugHistory(true),
-  });
-
-  // Fetch and log history from database
-  const handleFetchHistory = async () => {
-    try {
-      const response = await API.getHistory();
-      console.log("History from database:", response);
-    } catch (error) {
-      console.error("Failed to fetch history:", error);
-    }
+  // Open stats modal
+  const handleFetchHistory = () => {
+    setShowStatsModal(true);
   };
 
   const revealedCount = grid.getRevealedCount();
@@ -291,26 +271,14 @@ export default function Game({ difficulty }: GameProps) {
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        onSuccess={(username) => {
-          // Show how to play modal after successful auth for first-time users
-          const hasHistory = localStorage.getItem("wordgame-history");
-          if (!hasHistory) {
-            setTimeout(() => {
-              setShowHowToPlay(true);
-            }, 500);
-          }
-        }}
-      />
-
-      {/* How to Play Modal */}
-      <HowToPlayModal
-        open={showHowToPlay}
-        onOpenChange={setShowHowToPlay}
-        isPractice={gameState.difficulty === "practice"}
+        onSuccess={(username) => {}}
       />
 
       {/* Debug History Modal */}
       <DebugHistoryModal open={showDebugHistory} onOpenChange={setShowDebugHistory} />
+
+      {/* Stats Modal */}
+      <StatsModal open={showStatsModal} onOpenChange={setShowStatsModal} />
 
       <main className="container mx-auto px-2 sm:px-4 pb-4 max-w-2xl">
         <div className="relative">
@@ -340,7 +308,7 @@ export default function Game({ difficulty }: GameProps) {
                   <button
                     onClick={handleGuess}
                     disabled={!inputValue}
-                    className="px-2 py-1 bg-gray-200 hover:bg-gray-300 border-2 border-gray-300 rounded-lg text-sm font-bold text-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-200"
+                    className="px-2 py-1 bg-gray-200 hover:bg-gray-300 border-2 border-gray-300 rounded-sm text-sm font-bold text-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-200"
                     data-testid="guess-button"
                   >
                     {inputValue.length <= 1 ? "GUESS" : "GUESS WORD"}

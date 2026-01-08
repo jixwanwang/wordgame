@@ -176,14 +176,21 @@ export const API = {
   async getHistory() {
     return apiRequest<{
       success: boolean;
-      results?: Array<{
-        username: string;
-        date: string;
-        guesses: string[];
-        numGuesses: number;
-        won: boolean;
-        submittedAt: Date;
-      }>;
+      stats?: {
+        firstGame: string;
+        bestStreak: {
+          dateEnded: string;
+          streak: number;
+        };
+        bestGame: {
+          date: string;
+          guesses: number;
+        };
+        favoriteFirstGuess: {
+          guess: string;
+          percent: number;
+        };
+      };
       message?: string;
     }>("/api/history");
   },
