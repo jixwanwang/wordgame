@@ -31,6 +31,19 @@ const cookies = {
   },
 };
 
+// Decode JWT payload (without verification - only for reading exp time)
+function decodeJWT(token: string): { exp?: number; username?: string } | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+
+    const payload = JSON.parse(atob(parts[1]));
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
 // Auth token management
 export const Auth = {
   getToken(): string | null {
@@ -64,6 +77,21 @@ export const Auth = {
   logout() {
     this.clearToken();
     this.clearUsername();
+  },
+
+  // Check if token expires in 5 days or less
+  shouldRefreshToken(): boolean {
+    const token = this.getToken();
+    if (!token) return false;
+
+    const payload = decodeJWT(token);
+    if (!payload || !payload.exp) return false;
+
+    const expiresAt = payload.exp * 1000; // Convert to milliseconds
+    const now = Date.now();
+    const fiveDays = 5 * 24 * 60 * 60 * 1000; // 5 days in ms
+
+    return expiresAt - now <= fiveDays;
   },
 };
 
@@ -214,6 +242,24 @@ export const API = {
       return response.status !== 401 && response.status !== 403;
     } catch (error) {
       console.error("Error checking auth token:", error);
+      return false;
+    }
+  },
+
+  // Refresh the auth token
+  async refreshToken(): Promise<boolean> {
+    try {
+      const response = await apiRequest<{ success: boolean; token?: string }>("/api/refresh-token", {
+        method: "POST",
+      });
+
+      if (response.success && response.token) {
+        Auth.setToken(response.token);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Error refreshing token:", error);
       return false;
     }
   },

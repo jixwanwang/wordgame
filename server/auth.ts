@@ -11,9 +11,9 @@ const SALT_ROUNDS = 10;
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-key-change-in-production";
 
 /**
- * JWT expiration time - 7 days
+ * JWT expiration time - 15 days
  */
-const JWT_EXPIRES_IN = "7d";
+const JWT_EXPIRES_IN = "15d";
 
 /**
  * JWT token payload

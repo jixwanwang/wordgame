@@ -434,6 +434,39 @@ export function createApp(db: Database) {
     }
   });
 
+  /**
+   * POST /api/refresh-token
+   * Refresh the user's auth token
+   * Headers: Authorization: Bearer <token>
+   * Response: { success: boolean, token?: string, message?: string }
+   */
+  app.post("/api/refresh-token", authenticateToken, async (req: Request, res: Response) => {
+    const username = req.user?.username;
+
+    if (username == null) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    try {
+      // Generate a new token
+      const token = generateAuthToken(username);
+
+      return res.json({
+        success: true,
+        token,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to refresh token",
+      });
+    }
+  });
+
   // Health check endpoint
   app.get("/health", (_req: Request, res: Response) => {
     res.json({ status: "ok" });

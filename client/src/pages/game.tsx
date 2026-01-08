@@ -21,6 +21,7 @@ import {
 import { Link } from "wouter";
 import { isValidWord } from "@shared/lib/all_words";
 import { API, Auth } from "@/lib/api-client";
+import { getGameHistory } from "@/lib/game-storage";
 
 // separate the storage layer with a proper api for actions rather than whole state updates
 // use the error popup for tutorial. start with guess a letter (and give a suggestion that will guarantee multiple)
@@ -49,25 +50,43 @@ export default function Game({ difficulty }: GameProps) {
   const [toastMessage, setToastMessage] = useState("");
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  // Show auth modal if not logged in
+  // Show auth modal if not logged in, and refresh token if needed
   useEffect(() => {
     const checkAuth = async () => {
-      // Check if user is authenticated
+      // if the user is not authenticated and has game history, pop up the register/login modal.
       if (!Auth.isAuthenticated()) {
-        setTimeout(() => {
-          setShowAuthModal(true);
-        }, 500);
+        if (getGameHistory().lastCompletedDate != null) {
+          setTimeout(() => {
+            setShowAuthModal(true);
+          }, 500);
+        }
         return;
       }
 
-      // If authenticated, verify token is still valid
-      const isValid = await API.checkAuthToken();
-      if (!isValid) {
-        Auth.logout(); // Clear the expired token
-        setTimeout(() => {
-          setShowAuthModal(true);
-        }, 500);
-        return;
+      // Check if token should be refreshed (5 days or less remaining)
+      if (Auth.shouldRefreshToken()) {
+        const refreshed = await API.refreshToken();
+        if (!refreshed) {
+          // Refresh failed, check if token is still valid
+          const isValid = await API.checkAuthToken();
+          if (!isValid) {
+            Auth.logout();
+            setTimeout(() => {
+              setShowAuthModal(true);
+            }, 500);
+            return;
+          }
+        }
+      } else {
+        // Token doesn't need refresh yet, but verify it's still valid
+        const isValid = await API.checkAuthToken();
+        if (!isValid) {
+          Auth.logout(); // Clear the expired token
+          setTimeout(() => {
+            setShowAuthModal(true);
+          }, 500);
+          return;
+        }
       }
     };
 

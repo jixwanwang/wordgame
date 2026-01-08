@@ -136,17 +136,7 @@ export function StatsModal({ open, onOpenChange }: StatsModalProps) {
 
         {stats && !loading && !error && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <StatCard
-              title="First Game"
-              icon={<Cake className="w-7 h-7 text-blue-500 flex-shrink-0" />}
-            >
-              <div className="text-md font-bold">{formatDate(stats.firstGame)}</div>
-            </StatCard>
-
-            <StatCard
-              title="Best Streak"
-              icon={<Flame className="w-7 h-7 text-orange-500 flex-shrink-0" />}
-            >
+            <StatCard title="Best Streak" icon={<div className="text-3xl">🔥</div>}>
               <div className="flex items-center gap-1.5">
                 <div className="text-md font-bold">{stats.bestStreak.streak} days</div>
                 {isStreakActive ? (
@@ -179,6 +169,13 @@ export function StatsModal({ open, onOpenChange }: StatsModalProps) {
                   {(stats.favoriteFirstGuess.percent * 100).toFixed(0)}% of games
                 </div>
               </div>
+            </StatCard>
+
+            <StatCard
+              title="First Game"
+              icon={<Cake className="w-7 h-7 text-blue-500 flex-shrink-0" />}
+            >
+              <div className="text-md font-bold">{formatDate(stats.firstGame)}</div>
             </StatCard>
           </div>
         )}
