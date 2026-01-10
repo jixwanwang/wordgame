@@ -52,3 +52,28 @@ export function getNowInPacificTime(): Date {
 
   return new Date(pacificString);
 }
+
+/**
+ * Check if two dates in MM-DD-YYYY format are consecutive days
+ * @param date1 The earlier date (MM-DD-YYYY)
+ * @param date2 The later date (MM-DD-YYYY)
+ * @returns true if date2 is exactly one day after date1
+ */
+export function areConsecutiveDays(date1: string, date2: string): boolean {
+  // Parse dates (format: MM-DD-YYYY)
+  const [month1, day1, year1] = date1.split("-").map(Number);
+  const [month2, day2, year2] = date2.split("-").map(Number);
+
+  // Create Date objects (using UTC to avoid timezone issues)
+  const d1 = new Date(Date.UTC(year1, month1 - 1, day1));
+  const d2 = new Date(Date.UTC(year2, month2 - 1, day2));
+
+  // Calculate difference in milliseconds
+  const diffMs = d2.getTime() - d1.getTime();
+
+  // One day in milliseconds
+  const oneDayMs = 24 * 60 * 60 * 1000;
+
+  // Check if exactly one day apart
+  return diffMs === oneDayMs;
+}

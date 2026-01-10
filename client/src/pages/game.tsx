@@ -67,21 +67,18 @@ export default function Game({ difficulty }: GameProps) {
       if (Auth.shouldRefreshToken()) {
         const refreshed = await API.refreshToken();
         if (!refreshed) {
-          // Refresh failed, check if token is still valid
-          const isValid = await API.checkAuthToken();
-          if (!isValid) {
-            Auth.logout();
-            setTimeout(() => {
-              setShowAuthModal(true);
-            }, 500);
-            return;
-          }
+          // Refresh failed, log the user out
+          Auth.logout();
+          setTimeout(() => {
+            setShowAuthModal(true);
+          }, 500);
+          return;
         }
       } else {
         // Token doesn't need refresh yet, but verify it's still valid
         const isValid = await API.checkAuthToken();
         if (!isValid) {
-          Auth.logout(); // Clear the expired token
+          Auth.logout();
           setTimeout(() => {
             setShowAuthModal(true);
           }, 500);
@@ -364,6 +361,7 @@ export default function Game({ difficulty }: GameProps) {
                     grid.getRevealedLetters(),
                   )}
                   puzzleNumber={puzzleNumber}
+                  currentStreak={gameState.currentStreak}
                 />
               </div>
             ) : (

@@ -1,12 +1,6 @@
 import { PuzzleResult } from "./db";
 import { parseDate, areConsecutiveDays } from "../lib/game-utils.js";
-
-type Stats = {
-  firstGame: string | null;
-  bestStreak: { dateEnded: string; streak: number } | null;
-  bestGame: { date: string; guesses: number } | null;
-  favoriteFirstGuess: { guess: string; percent: number } | null;
-};
+import type { Stats } from "../lib/schema.js";
 
 /**
  * Compute stats from a user's puzzle history
@@ -16,6 +10,8 @@ type Stats = {
 function computeStatsFromHistory(puzzles: PuzzleResult[]): Stats {
   if (puzzles.length === 0) {
     return {
+      numGames: 0,
+      numWon: 0,
       firstGame: null,
       bestStreak: null,
       bestGame: null,
@@ -86,7 +82,7 @@ function computeStatsFromHistory(puzzles: PuzzleResult[]): Stats {
         previousDate = currentDate;
       } else {
         // Gap in streak - check if current was best, then reset
-        if (currentStreak > bestStreakCount) {
+        if (currentStreak >= bestStreakCount) {
           bestStreakCount = currentStreak;
           bestStreakEndDate = currentStreakEndDate;
         }
@@ -98,7 +94,7 @@ function computeStatsFromHistory(puzzles: PuzzleResult[]): Stats {
   }
 
   // Check final streak after loop ends
-  if (currentStreak > bestStreakCount) {
+  if (currentStreak >= bestStreakCount) {
     bestStreakCount = currentStreak;
     bestStreakEndDate = currentStreakEndDate;
   }
@@ -123,7 +119,76 @@ function computeStatsFromHistory(puzzles: PuzzleResult[]): Stats {
       numLetters > 0
         ? { guess: favoriteLetter, percent: firstGuesses[favoriteLetter] / numLetters }
         : null,
+    numGames: sortedPuzzles.length,
+    numWon: sortedPuzzles.filter((puzzle) => puzzle.won).length,
   };
 }
 
-export { computeStatsFromHistory, type Stats };
+/**
+ * Compute the current streak from a user's puzzle history
+ * @param puzzles - Array of puzzle results for a user
+ * @returns Object with currentStreak and lastCompletedDate
+ */
+function computeCurrentStreakFromHistory(puzzles: PuzzleResult[]): {
+  currentStreak: number;
+  lastCompletedDate: string | null;
+} {
+  if (puzzles.length === 0) {
+    return {
+      currentStreak: 0,
+      lastCompletedDate: null,
+    };
+  }
+
+  // Sort puzzles by date (newest first)
+  const sortedPuzzles = [...puzzles].sort((a, b) => {
+    const dateA = parseDate(a.date);
+    const dateB = parseDate(b.date);
+    return dateB.getTime() - dateA.getTime();
+  });
+
+  // Most recent puzzle
+  const lastCompleted = sortedPuzzles[0];
+  const lastCompletedDate = lastCompleted.date;
+
+  // If most recent puzzle was lost, streak is 0
+  if (!lastCompleted.won) {
+    return {
+      currentStreak: 0,
+      lastCompletedDate,
+    };
+  }
+
+  // Count consecutive wins from the most recent win backwards
+  let currentStreak = 1;
+  let previousDate = parseDate(lastCompleted.date);
+
+  for (let i = 1; i < sortedPuzzles.length; i++) {
+    const puzzle = sortedPuzzles[i];
+
+    // If this puzzle was lost, streak ends
+    if (!puzzle.won) {
+      break;
+    }
+
+    const currentDate = parseDate(puzzle.date);
+
+    // Check if this is consecutive with the previous date (going backwards in time)
+    // areConsecutiveDays(date1, date2) checks if date2 is one day before date1
+    // previousDate is newer, currentDate is older, so check if currentDate is one day before previousDate
+    if (areConsecutiveDays(previousDate, currentDate)) {
+      currentStreak += 1;
+      previousDate = currentDate;
+    } else {
+      // Gap in streak, stop counting
+      break;
+    }
+  }
+
+  return {
+    currentStreak,
+    lastCompletedDate,
+  };
+}
+
+export { computeStatsFromHistory, computeCurrentStreakFromHistory };

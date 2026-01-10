@@ -6,8 +6,8 @@ import pkg from "pg";
 const { Pool } = pkg;
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcrypt";
-import { users, results } from "./schema.js";
-import type { Database, PuzzleResult } from "./db.js";
+import { users, results, userStats } from "./schema.js";
+import type { Database, PuzzleResult, UserStats } from "./db.js";
 
 const SALT_ROUNDS = 10;
 
@@ -171,6 +171,53 @@ export class PostgresDatabase implements Database {
       })
       .onConflictDoNothing({
         target: [results.username, results.date],
+      });
+  }
+
+  async getUserStats(username: string): Promise<UserStats | null> {
+    const lowerUsername = username.toLowerCase();
+
+    const result = await this.db
+      .select()
+      .from(userStats)
+      .where(eq(userStats.username, lowerUsername))
+      .limit(1);
+
+    if (result.length === 0) {
+      return null;
+    }
+
+    const row = result[0];
+
+    return {
+      username: row.username,
+      currentStreak: row.currentStreak,
+      lastCompletedDate: row.lastCompletedDate,
+      updatedAt: row.updatedAt,
+    };
+  }
+
+  async updateUserStats(
+    username: string,
+    currentStreak: number,
+    lastCompletedDate: string,
+  ): Promise<void> {
+    const lowerUsername = username.toLowerCase();
+
+    await this.db
+      .insert(userStats)
+      .values({
+        username: lowerUsername,
+        currentStreak,
+        lastCompletedDate,
+      })
+      .onConflictDoUpdate({
+        target: [userStats.username],
+        set: {
+          currentStreak,
+          lastCompletedDate,
+          updatedAt: new Date(),
+        },
       });
   }
 

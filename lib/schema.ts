@@ -31,3 +31,12 @@ export interface GameHistory {
   currentStreak: number;
   lastCompletedDate: string | null;
 }
+
+export interface Stats {
+  firstGame: string | null;
+  bestStreak: { dateEnded: string; streak: number } | null;
+  bestGame: { date: string; guesses: number } | null;
+  favoriteFirstGuess: { guess: string; percent: number } | null;
+  numGames: number;
+  numWon: number;
+}

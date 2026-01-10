@@ -2,7 +2,7 @@
  * API client for authentication and game data
  */
 
-import type { GameHistory } from "@shared/lib/schema";
+import type { GameHistory, SavedGameState, Stats } from "@shared/lib/schema";
 
 // @ts-ignore - Vite env types
 const API_BASE_URL = import.meta.env?.VITE_API_URL || "";
@@ -180,12 +180,8 @@ export const API = {
         username?: string;
         tokenStatus: string;
       };
-      userResult?: {
-        guesses: string[];
-        numGuesses: number;
-        won: boolean;
-        submittedAt: Date;
-      };
+      savedState?: SavedGameState;
+      currentStreak?: number;
     }>(`/api/puzzle${queryString}`);
   },
 
@@ -193,6 +189,7 @@ export const API = {
   async submitResult(puzzleId: string, guesses: string[], won: boolean) {
     return apiRequest<{
       success: boolean;
+      streak?: number;
       message?: string;
     }>("/api/submit", {
       method: "POST",
@@ -204,21 +201,7 @@ export const API = {
   async getHistory() {
     return apiRequest<{
       success: boolean;
-      stats?: {
-        firstGame: string;
-        bestStreak: {
-          dateEnded: string;
-          streak: number;
-        };
-        bestGame: {
-          date: string;
-          guesses: number;
-        };
-        favoriteFirstGuess: {
-          guess: string;
-          percent: number;
-        };
-      };
+      stats?: Stats;
       message?: string;
     }>("/api/history");
   },
@@ -232,14 +215,17 @@ export const API = {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/puzzle`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/validate`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      // Token is valid if we don't get 401 or 403
-      return response.status !== 401 && response.status !== 403;
+      if (response.ok) {
+        const data = await response.json();
+        return data.valid === true;
+      }
+      return false;
     } catch (error) {
       console.error("Error checking auth token:", error);
       return false;

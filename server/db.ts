@@ -11,6 +11,13 @@ export interface PuzzleResult {
   submittedAt: Date;
 }
 
+export interface UserStats {
+  username: string;
+  currentStreak: number;
+  lastCompletedDate: string | null;
+  updatedAt: Date;
+}
+
 export interface Database {
   /**
    * Check if a user exists
@@ -59,6 +66,22 @@ export interface Database {
     guesses: string[],
     won: boolean,
   ): Promise<void>;
+
+  /**
+   * Get user stats (streak, last completed date)
+   * @returns UserStats if found, null otherwise
+   */
+  getUserStats(username: string): Promise<UserStats | null>;
+
+  /**
+   * Update user stats (streak, last completed date)
+   * Creates the record if it doesn't exist
+   */
+  updateUserStats(
+    username: string,
+    currentStreak: number,
+    lastCompletedDate: string,
+  ): Promise<void>;
 }
 
 /**
@@ -70,6 +93,7 @@ export class StubDatabase implements Database {
   // but preserve original username for display
   private users: Map<string, { originalUsername: string; password: string }> = new Map();
   private results: Map<string, PuzzleResult> = new Map(); // `${username}_${date}` -> result
+  private userStats: Map<string, UserStats> = new Map(); // lowercase username -> UserStats
 
   async userExists(username: string): Promise<boolean> {
     return this.users.has(username.toLowerCase());
@@ -138,5 +162,24 @@ export class StubDatabase implements Database {
       submittedAt: new Date(),
     };
     this.results.set(key, result);
+  }
+
+  async getUserStats(username: string): Promise<UserStats | null> {
+    const lowerUsername = username.toLowerCase();
+    return this.userStats.get(lowerUsername) || null;
+  }
+
+  async updateUserStats(
+    username: string,
+    currentStreak: number,
+    lastCompletedDate: string,
+  ): Promise<void> {
+    const lowerUsername = username.toLowerCase();
+    this.userStats.set(lowerUsername, {
+      username: lowerUsername,
+      currentStreak,
+      lastCompletedDate,
+      updatedAt: new Date(),
+    });
   }
 }

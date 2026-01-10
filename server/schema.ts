@@ -43,7 +43,26 @@ export const results = pgTable(
   }),
 );
 
+/**
+ * User stats table
+ * Stores current streak and last completed date for each user
+ */
+export const userStats = pgTable("user_stats", {
+  // Username (lowercase, references users table)
+  username: varchar("username", { length: 50 })
+    .primaryKey()
+    .references(() => users.username, { onDelete: "cascade" }),
+  // Current win streak
+  currentStreak: integer("current_streak").notNull().default(0),
+  // Last completed puzzle date in MM-DD-YYYY format
+  lastCompletedDate: varchar("last_completed_date", { length: 10 }),
+  // Timestamp when stats were last updated
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Result = typeof results.$inferSelect;
 export type NewResult = typeof results.$inferInsert;
+export type UserStats = typeof userStats.$inferSelect;
+export type NewUserStats = typeof userStats.$inferInsert;

@@ -1,29 +1,14 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
-import { Flame, Trophy, Cake, BookHeart } from "lucide-react";
+import { Flame, Trophy, Cake, BookHeart, Gamepad, Gamepad2 } from "lucide-react";
 import { API, Auth } from "@/lib/api-client";
 import { getTodayInPacificTime } from "../../../server/time-utils";
+import type { Stats } from "@shared/lib/schema";
 
 interface StatsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-interface Stats {
-  firstGame: string;
-  bestStreak: {
-    dateEnded: string;
-    streak: number;
-  };
-  bestGame: {
-    date: string;
-    guesses: number;
-  };
-  favoriteFirstGuess: {
-    guess: string;
-    percent: number;
-  };
 }
 
 interface StatCardProps {
@@ -100,7 +85,12 @@ export function StatsModal({ open, onOpenChange }: StatsModalProps) {
     try {
       const response = await API.getHistory();
       if (response.success && response.stats) {
-        setStats(response.stats);
+        // Check if user has any games
+        if (response.stats.numGames === 0) {
+          setError("No games played yet");
+        } else {
+          setStats(response.stats);
+        }
       } else {
         setError("No stats available");
       }
@@ -112,7 +102,7 @@ export function StatsModal({ open, onOpenChange }: StatsModalProps) {
     }
   };
 
-  const isStreakActive = stats?.bestStreak.dateEnded === getTodayInPacificTime();
+  const isStreakActive = stats?.bestStreak?.dateEnded === getTodayInPacificTime();
   const title = Auth.isAuthenticated() ? `${Auth.getUsername()}'s stats` : "Your Stats";
 
   return (
@@ -136,47 +126,58 @@ export function StatsModal({ open, onOpenChange }: StatsModalProps) {
 
         {stats && !loading && !error && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <StatCard title="Best Streak" icon={<div className="text-3xl">🔥</div>}>
-              <div className="flex items-center gap-1.5">
-                <div className="text-md font-bold">{stats.bestStreak.streak} days</div>
-                {isStreakActive ? (
-                  <div className="text-sm font-semibold text-gray-500">and still going strong!</div>
-                ) : (
-                  <div className="text-sm text-gray-500">ended {stats.bestStreak.dateEnded}</div>
-                )}
-              </div>
-            </StatCard>
-
             <StatCard
-              title="Best Game"
-              icon={<Trophy className="w-7 h-7 text-yellow-500 flex-shrink-0" />}
-            >
-              <div className="flex items-center gap-1.5">
-                <div className="text-md font-bold">{stats.bestGame.guesses} guesses</div>
-                <div className="text-sm text-gray-500">on {stats.bestGame.date}</div>
-              </div>
-            </StatCard>
-
-            <StatCard
-              title="Favorite First Guess"
-              icon={<BookHeart className="w-7 h-7 text-gray-600 flex-shrink-0" />}
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-gray-200 border border-gray-300 rounded-sm flex items-center justify-center text-sm font-bold text-dark">
-                  {stats.favoriteFirstGuess.guess}
+              title="Total Plays"
+              icon={
+                <div className="text-3xl">
+                  <img src="../favicon.png" className="w-7 h-7 text-green-600 flex-shrink-0" />
                 </div>
-                <div className="text-sm text-gray-500">
-                  {(stats.favoriteFirstGuess.percent * 100).toFixed(0)}% of games
+              }
+            >
+              <div className="flex items-center gap-1.5">
+                <div className="text-md font-bold">
+                  {stats.numGames} days -- {stats.numWon} wins
                 </div>
               </div>
             </StatCard>
+            {stats.bestStreak && (
+              <StatCard
+                title="Best Streak"
+                icon={<Flame className="w-7 h-7 text-orange-500 flex-shrink-0" />}
+              >
+                <div className="flex items-center gap-1.5">
+                  <div className="text-md font-bold">{stats.bestStreak.streak} days</div>
+                  {isStreakActive ? (
+                    <div className="text-sm font-semibold text-gray-500">
+                      and still going strong!
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500">ended {stats.bestStreak.dateEnded}</div>
+                  )}
+                </div>
+              </StatCard>
+            )}
 
-            <StatCard
-              title="First Game"
-              icon={<Cake className="w-7 h-7 text-blue-500 flex-shrink-0" />}
-            >
-              <div className="text-md font-bold">{formatDate(stats.firstGame)}</div>
-            </StatCard>
+            {stats.bestGame && (
+              <StatCard
+                title="Best Game"
+                icon={<Trophy className="w-7 h-7 text-yellow-500 flex-shrink-0" />}
+              >
+                <div className="flex items-center gap-1.5">
+                  <div className="text-md font-bold">{stats.bestGame.guesses} guesses</div>
+                  <div className="text-sm text-gray-500">on {stats.bestGame.date}</div>
+                </div>
+              </StatCard>
+            )}
+
+            {stats.firstGame && (
+              <StatCard
+                title="First Game"
+                icon={<Cake className="w-7 h-7 text-blue-500 flex-shrink-0" />}
+              >
+                <div className="text-md font-bold">{formatDate(stats.firstGame)}</div>
+              </StatCard>
+            )}
           </div>
         )}
       </DialogContent>

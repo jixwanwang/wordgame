@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { GameState, Guess } from "@shared/schema";
+import { GameState, Guess, SavedGameState } from "@shared/lib/schema";
 import { Grid8x8 } from "@shared/lib/grid";
 import { NUM_GUESSES } from "@shared/lib/game-utils";
 import { getPuzzlesByDifficulty, type Puzzle } from "@shared/lib/puzzles";
@@ -42,6 +42,9 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
       try {
         let puzzle: Puzzle;
 
+        let serverSavedState: SavedGameState | undefined;
+        let currentStreak: number = 0;
+
         if (isPracticeMode) {
           // For practice mode, use local random puzzle
           puzzle = getRandomPracticePuzzle();
@@ -54,6 +57,8 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
             grid: response.grid,
             wordPositions: response.wordPositions,
           };
+          serverSavedState = response.savedState;
+          currentStreak = response.currentStreak ?? 0;
         }
 
         // Guard against missing puzzle date
@@ -80,9 +85,23 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
             currentStreak: 0,
           });
         } else {
-          // Check for saved game state
-          const savedState = getGameForDay(puzzle.date);
-          const currentStreak = getCurrentStreak();
+          // Use server saved state if available, otherwise fall back to local storage
+          const savedState = serverSavedState || getGameForDay(puzzle.date);
+
+          // Use server streak if authenticated and available, otherwise use local storage
+          let localCurrentStreak = getCurrentStreak();
+          if (Auth.isAuthenticated()) {
+            localCurrentStreak = currentStreak;
+          }
+
+          const guessedLetters = savedState.guessedLetters;
+          savedState.guesses?.forEach((guess) => {
+            guess.split("").forEach((letter) => {
+              if (!guessedLetters.includes(letter)) {
+                guessedLetters.push(letter);
+              }
+            });
+          });
 
           // Restore saved state
           setGameState({
@@ -91,7 +110,7 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
             guessedLetters: savedState.guessedLetters,
             currentPuzzle: puzzle.date,
             difficulty,
-            currentStreak: currentStreak,
+            currentStreak: localCurrentStreak,
           });
 
           // Restore revealed letters in grid
@@ -169,10 +188,15 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
         if (!isPracticeMode && currentPuzzle.date) {
           const isNowComplete = newState.gameStatus === "won" || newState.gameStatus === "lost";
 
-          addGuess(currentPuzzle.date, newGuessedLetters, newState.totalGuessesRemaining, guess.value);
+          addGuess(
+            currentPuzzle.date,
+            newGuessedLetters,
+            newState.totalGuessesRemaining,
+            guess.value,
+          );
           if (isNowComplete) {
-            const updatedStreak = completeGame(currentPuzzle.date, newState.gameStatus === "won");
-            newState.currentStreak = updatedStreak;
+            // Always complete in local storage for consistency
+            const localStreak = completeGame(currentPuzzle.date, newState.gameStatus === "won");
 
             // Submit result to API if user is authenticated
             if (Auth.isAuthenticated()) {
@@ -181,10 +205,27 @@ export function useGameState(difficulty: "normal" | "hard" | "practice" = "norma
               const puzzleId = `puzzle_${currentPuzzle.date.replace(/-/g, "_")}`;
               const wonGame = newState.gameStatus === "won";
 
-              API.submitResult(puzzleId, guesses, wonGame).catch((error) => {
-                console.error("Failed to submit result to API:", error);
-                // Don't block the game completion if API submission fails
-              });
+              API.submitResult(puzzleId, guesses, wonGame)
+                .then((response) => {
+                  // Use the streak from the API response
+                  if (response.streak != null) {
+                    setGameState((prev) => ({
+                      ...prev,
+                      currentStreak: response.streak ?? 0,
+                    }));
+                  }
+                })
+                .catch((error) => {
+                  console.error("Failed to submit result to API:", error);
+                  // Fall back to local storage streak if API submission fails
+                  // (already set below)
+                });
+
+              // Set local streak as initial value (will be updated if API succeeds)
+              newState.currentStreak = localStreak;
+            } else {
+              // Not authenticated, use local storage streak
+              newState.currentStreak = localStreak;
             }
           }
         }

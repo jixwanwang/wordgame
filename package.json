@@ -14,7 +14,7 @@
     "test": "node --import tsx --test client/src/**/*.test.ts",
     "test:server": "node --import tsx --test server/**/*.test.ts",
     "test:all": "npm run test && npm run test:server",
-    "db:push": "drizzle-kit push",
+    "db:push": "bash scripts/db-push.sh",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",

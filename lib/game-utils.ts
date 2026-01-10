@@ -77,19 +77,11 @@ export function getTotalLetterCount(words: string[]): number {
  */
 export function areConsecutiveDays(date1: Date, date2: Date): boolean {
   // Normalize dates to midnight to avoid time-of-day issues
-  const date1Normalized = new Date(
-    date1.getFullYear(),
-    date1.getMonth(),
-    date1.getDate(),
-  );
-  const date2Normalized = new Date(
-    date2.getFullYear(),
-    date2.getMonth(),
-    date2.getDate(),
-  );
+  const date1Normalized = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
+  const date2Normalized = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
 
   const timeDiff = date1Normalized.getTime() - date2Normalized.getTime();
   // Calculate days difference, accounting for DST (23-25 hour days)
-  const daysDiff = Math.round(timeDiff / (1000 * 60 * 60 * 24));
+  const daysDiff = Math.round(Math.abs(timeDiff / (1000 * 60 * 60 * 24)));
   return daysDiff === 1;
 }

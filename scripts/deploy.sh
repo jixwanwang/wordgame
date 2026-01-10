@@ -182,10 +182,6 @@ case $DEPLOY_MODE in
         echo ""
         echo "To run the updated scripts on the VM:"
         echo -e "${YELLOW}  ./scripts/ssh.sh${NC}"
-        echo ""
-        echo "Then on the VM, you can run any updated script, e.g.:"
-        echo -e "${YELLOW}  cd $REMOTE_DIR/scripts${NC}"
-        echo -e "${YELLOW}  ./setup-vm.sh${NC}"
         ;;
     app)
         echo "App code deployed successfully!"
@@ -201,9 +197,9 @@ case $DEPLOY_MODE in
         echo "To complete setup, SSH into your VM and run the setup script:"
         echo -e "${YELLOW}  ./scripts/ssh.sh${NC}"
         echo ""
-        echo "Then on the VM, run:"
+        echo "Then on the VM:"
         echo -e "${YELLOW}  cd $REMOTE_DIR/scripts${NC}"
-        echo -e "${YELLOW}  ./setup-vm.sh${NC}"
+        echo -e "${YELLOW}  ./deploy-on-vm.sh${NC}"
         ;;
 esac
 

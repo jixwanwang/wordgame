@@ -8,6 +8,7 @@ interface GameOverStatsProps {
   numGuesses: number;
   totalLettersRevealed: number;
   puzzleNumber: number;
+  currentStreak: number;
 }
 
 export function GameOverStats({
@@ -15,9 +16,9 @@ export function GameOverStats({
   numGuesses,
   totalLettersRevealed,
   puzzleNumber,
+  currentStreak,
 }: GameOverStatsProps) {
   const [copied, setCopied] = useState(false);
-  const currentStreak = getCurrentStreak();
 
   const shareText = () => {
     return won

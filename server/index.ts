@@ -16,10 +16,11 @@ import {
   authenticateToken,
   optionalAuthenticateToken,
 } from "./auth.js";
+import { NUM_GUESSES } from "@shared/lib/game-utils.js";
 import { getPuzzleByDate, getTodaysPuzzle } from "./puzzles.js";
 import { convertHistoryToResults } from "./history-converter.js";
-import { computeStatsFromHistory } from "./stats.js";
-import { getTodayInPacificTime, getNowInPacificTime } from "./time-utils.js";
+import { computeStatsFromHistory, computeCurrentStreakFromHistory } from "./stats.js";
+import { getTodayInPacificTime, getNowInPacificTime, areConsecutiveDays } from "./time-utils.js";
 
 /**
  * Create and configure the Express app with dependencies injected
@@ -249,7 +250,8 @@ export function createApp(db: Database) {
    *   grid: GameGrid,
    *   wordPositions: Record<string, [number, number][]>,
    *   auth?: { username: string, tokenStatus: string },
-   *   userResult?: { guesses: string[], numGuesses: number, won: boolean, submittedAt: Date }
+   *   savedState?: SavedGameState,
+   *   currentStreak?: number
    * }
    */
   app.get("/api/puzzle", optionalAuthenticateToken, async (req: Request, res: Response) => {
@@ -321,16 +323,29 @@ export function createApp(db: Database) {
       };
     }
 
-    // If user is authenticated, fetch their result for this puzzle
+    // If user is authenticated, fetch their result and stats for this puzzle
     if (req.user?.username) {
       try {
+        // Fetch user stats (includes current streak)
+        const userStats = await db.getUserStats(req.user.username);
+        if (userStats) {
+          response.currentStreak = userStats.currentStreak;
+        }
+
+        // Fetch user result for this specific puzzle
         const userResult = await db.getPuzzleResult(req.user.username, puzzleDate);
         if (userResult) {
-          response.userResult = {
+          // Convert PuzzleResult to SavedGameState format
+          // Extract guessed letters (single character guesses)
+          const guessedLetters = userResult.guesses.filter((g) => g.length === 1);
+
+          response.savedState = {
+            date: userResult.date,
+            guessesRemaining: NUM_GUESSES - userResult.numGuesses,
+            guessedLetters: guessedLetters,
             guesses: userResult.guesses,
-            numGuesses: userResult.numGuesses,
-            won: userResult.won,
-            submittedAt: userResult.submittedAt,
+            isComplete: true, // If result exists, game is complete
+            wonGame: userResult.won,
           };
         }
       } catch (error) {
@@ -381,15 +396,53 @@ export function createApp(db: Database) {
       // Extract date from puzzleId (format: puzzle_MM_DD_YYYY)
       const datePart = puzzleId.replace("puzzle_", "").replace(/_/g, "-");
 
-      // TODO: Validate words against puzzle
-      // TODO: Calculate actual score
-      // TODO: Calculate actual ranking
+      // Get current user stats to check if they've already submitted for this date
+      const currentStats = await db.getUserStats(username);
+
+      // Check if user has already submitted for this date
+      if (currentStats != null && currentStats.lastCompletedDate === datePart) {
+        // User has already submitted for this date, don't update streak
+        // But still allow the result to be stored (insertPuzzleResult uses onConflictDoNothing)
+        await db.insertPuzzleResult(username, datePart, guesses, won);
+
+        return res.json({
+          success: true,
+          streak: currentStats.currentStreak,
+        });
+      }
 
       // Store result in database
       await db.insertPuzzleResult(username, datePart, guesses, won);
 
+      // Calculate new streak
+      let newStreak = 0;
+
+      if (won) {
+        // If they won, update or increment streak
+        if (currentStats == null || currentStats.lastCompletedDate == null) {
+          // No previous stats or no previous completion, start streak at 1
+          newStreak = 1;
+        } else {
+          // Check if lastCompletedDate is the day before datePart
+          if (areConsecutiveDays(currentStats.lastCompletedDate, datePart)) {
+            // Consecutive win, increment streak
+            newStreak = currentStats.currentStreak + 1;
+          } else {
+            // Non-consecutive win, reset streak to 1
+            newStreak = 1;
+          }
+        }
+      } else {
+        // If they lost, reset streak to 0
+        newStreak = 0;
+      }
+
+      // Update user stats with new streak and last completed date
+      await db.updateUserStats(username, newStreak, datePart);
+
       return res.json({
         success: true,
+        streak: newStreak,
       });
     } catch (error) {
       console.error(error);
@@ -420,6 +473,14 @@ export function createApp(db: Database) {
       const results = await db.getAllPuzzleResults(username);
 
       const stats = computeStatsFromHistory(results);
+
+      // Compute current streak from history and sync to database
+      const { currentStreak, lastCompletedDate } = computeCurrentStreakFromHistory(results);
+
+      // Update user_stats table with computed streak
+      if (lastCompletedDate != null) {
+        await db.updateUserStats(username, currentStreak, lastCompletedDate);
+      }
 
       return res.json({
         success: true,
@@ -465,6 +526,17 @@ export function createApp(db: Database) {
         message: "Failed to refresh token",
       });
     }
+  });
+
+  /**
+   * GET /api/auth/validate
+   * Validate the user's auth token
+   * Headers: Authorization: Bearer <token>
+   * Response: { valid: boolean }
+   */
+  app.get("/api/auth/validate", authenticateToken, async (_req: Request, res: Response) => {
+    // If we reach here, the token is valid (authenticateToken middleware succeeded)
+    return res.json({ valid: true });
   });
 
   // Health check endpoint
