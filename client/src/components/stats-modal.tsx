@@ -5,6 +5,7 @@ import { Flame, Trophy, Cake, BookHeart, Gamepad, Gamepad2 } from "lucide-react"
 import { API, Auth } from "@/lib/api-client";
 import { getTodayInPacificTime } from "../../../server/time-utils";
 import type { Stats } from "@shared/lib/schema";
+import faviconUrl from "../../favicon.png";
 
 interface StatsModalProps {
   open: boolean;
@@ -130,7 +131,11 @@ export function StatsModal({ open, onOpenChange }: StatsModalProps) {
               title="Total Plays"
               icon={
                 <div className="text-3xl">
-                  <img src="../favicon.png" className="w-7 h-7 text-green-600 flex-shrink-0" />
+                  <img
+                    src={faviconUrl}
+                    alt="Game icon"
+                    className="w-7 h-7 text-green-600 flex-shrink-0"
+                  />
                 </div>
               }
             >
@@ -148,9 +153,7 @@ export function StatsModal({ open, onOpenChange }: StatsModalProps) {
                 <div className="flex items-center gap-1.5">
                   <div className="text-md font-bold">{stats.bestStreak.streak} days</div>
                   {isStreakActive ? (
-                    <div className="text-sm font-semibold text-gray-500">
-                      and still going strong!
-                    </div>
+                    <div className="text-sm font-semibold text-gray-500">and counting!</div>
                   ) : (
                     <div className="text-sm text-gray-500">ended {stats.bestStreak.dateEnded}</div>
                   )}
