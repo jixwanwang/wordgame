@@ -141,7 +141,7 @@ export function StatsModal({ open, onOpenChange }: StatsModalProps) {
             >
               <div className="flex items-center gap-1.5">
                 <div className="text-md font-bold">
-                  {stats.numGames} days -- {stats.numWon} wins
+                  {stats.numGames} days — {stats.numWon} wins
                 </div>
               </div>
             </StatCard>

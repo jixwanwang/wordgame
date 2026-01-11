@@ -174,83 +174,10 @@ else
 fi
 
 # ============================================
-# Step 5: Setup Cloud SQL Proxy
+# Step 5: Deploy and Start Application
 # ============================================
 echo ""
-echo "Step 5/7: Setting up Cloud SQL Proxy for database connection..."
-
-# Check if we have the Cloud SQL instance connection name
-if [ -f ~/wordgame/.env ]; then
-    # Load environment variables to get the connection name
-    export $(cat ~/wordgame/.env | grep -v '^#' | xargs)
-fi
-
-if [ -z "$GCP_SQL_INSTANCE_CONNECTION_NAME" ]; then
-    echo "  ⚠ WARNING: GCP_SQL_INSTANCE_CONNECTION_NAME not set in .env"
-    echo "  Cloud SQL Proxy will not be configured"
-    echo ""
-    echo "  To set it up later:"
-    echo "    1. Add to ~/wordgame/.env:"
-    echo "       GCP_SQL_INSTANCE_CONNECTION_NAME=project:region:instance"
-    echo "    2. Run: sudo systemctl restart cloud-sql-proxy"
-    echo ""
-else
-    echo "  Instance: $GCP_SQL_INSTANCE_CONNECTION_NAME"
-
-    # Download Cloud SQL Proxy if not present
-    if [ ! -f /usr/local/bin/cloud_sql_proxy ]; then
-        echo "  Downloading Cloud SQL Proxy..."
-        wget -q https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 -O /tmp/cloud_sql_proxy
-        chmod +x /tmp/cloud_sql_proxy
-        sudo mv /tmp/cloud_sql_proxy /usr/local/bin/cloud_sql_proxy
-        echo "  ✓ Cloud SQL Proxy installed"
-    else
-        echo "  ✓ Cloud SQL Proxy already installed"
-    fi
-
-    # Create systemd service for Cloud SQL Proxy
-    echo "  Creating systemd service..."
-    sudo tee /etc/systemd/system/cloud-sql-proxy.service > /dev/null <<EOF
-[Unit]
-Description=Cloud SQL Proxy
-After=network.target
-Requires=network.target
-
-[Service]
-Type=simple
-User=$USER
-WorkingDirectory=$HOME
-ExecStart=/usr/local/bin/cloud_sql_proxy -instances=$GCP_SQL_INSTANCE_CONNECTION_NAME=tcp:5432
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-    # Enable and start the service
-    sudo systemctl daemon-reload
-    sudo systemctl enable cloud-sql-proxy
-    sudo systemctl restart cloud-sql-proxy
-
-    # Wait a moment for proxy to start
-    sleep 2
-
-    # Check status
-    if sudo systemctl is-active --quiet cloud-sql-proxy; then
-        echo "  ✓ Cloud SQL Proxy is running"
-        echo "  Database accessible at localhost:5432"
-    else
-        echo "  ⚠ Cloud SQL Proxy failed to start"
-        echo "  Check logs: sudo journalctl -u cloud-sql-proxy -n 20"
-    fi
-fi
-
-# ============================================
-# Step 6: Deploy and Start Application
-# ============================================
-echo ""
-echo "Step 6/7: Deploying and starting application..."
+echo "Step 5/6: Deploying and starting application..."
 echo ""
 
 # Run the deploy-on-vm script
@@ -264,7 +191,7 @@ fi
 
 # Setup PM2 to start on boot (only needed during initial setup)
 echo ""
-echo "Step 7/7: Configuring PM2 auto-start on boot..."
+echo "Step 6/6: Configuring PM2 auto-start on boot..."
 STARTUP_CMD=$(pm2 startup systemd -u $USER --hp $HOME | grep "sudo")
 if [ -n "$STARTUP_CMD" ]; then
     eval $STARTUP_CMD > /dev/null 2>&1
@@ -287,14 +214,12 @@ echo "Architecture:"
 echo "  Internet → Nginx (port 443, HTTPS)"
 echo "           → Node.js (port 3000, HTTP)"
 echo "           → Express API (dist/start.js)"
-echo "           → Cloud SQL Proxy (localhost:5432)"
-echo "           → Cloud SQL PostgreSQL"
+echo "           → Supabase PostgreSQL (remote)"
 echo ""
 echo "What was configured:"
 echo "  ✓ Node.js 20 and PM2 process manager"
 echo "  ✓ Nginx reverse proxy (HTTPS termination)"
 echo "  ✓ SSL certificate from Let's Encrypt (auto-renews)"
-echo "  ✓ Cloud SQL Proxy (secure database connection)"
 echo "  ✓ Application built and running as PM2 process"
 echo "  ✓ PM2 auto-starts on system boot"
 echo ""
@@ -325,11 +250,6 @@ echo ""
 echo "  SSL certificate management:"
 echo "    sudo certbot certificates      # View certificate info"
 echo "    sudo certbot renew            # Manually renew certificates"
-echo ""
-echo "  Cloud SQL Proxy management:"
-echo "    sudo systemctl status cloud-sql-proxy   # Check proxy status"
-echo "    sudo systemctl restart cloud-sql-proxy  # Restart proxy"
-echo "    sudo journalctl -u cloud-sql-proxy -n 20  # View proxy logs"
 echo ""
 echo "  Quick test:"
 echo "    curl https://$DOMAIN/health"
