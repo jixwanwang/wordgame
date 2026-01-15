@@ -12,8 +12,9 @@ export interface GameState {
   totalGuessesRemaining: number;
   gameStatus: "playing" | "won" | "lost";
   guessedLetters: string[];
+  guesses: string[]; // Array of all guesses made (letters or words)
   currentPuzzle: string;
-  difficulty: "normal" | "hard" | "practice";
+  difficulty: "normal" | "hard";
   currentStreak: number;
 }
 

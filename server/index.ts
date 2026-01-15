@@ -117,6 +117,26 @@ export function createApp(db: Database) {
             console.error(`Failed to sync history for date ${result.date}:`, error);
           }
         }
+
+        // Update user stats with streak and last completed date from uploaded history
+        // Convert results to PuzzleResult format for streak computation
+        try {
+          const puzzleResults = results.map((result) => ({
+            username,
+            date: result.date,
+            guesses: result.guesses,
+            numGuesses: result.numGuesses,
+            won: result.won,
+            submittedAt: new Date(),
+          }));
+          const { currentStreak, lastCompletedDate } = computeCurrentStreakFromHistory(puzzleResults);
+          if (lastCompletedDate) {
+            await db.updateUserStats(username, currentStreak, lastCompletedDate);
+          }
+        } catch (error) {
+          // Log but don't fail registration if stats update fails
+          console.error(`Failed to update user stats for ${username}:`, error);
+        }
       }
 
       // Generate auth token
@@ -196,6 +216,19 @@ export function createApp(db: Database) {
             console.error(`Failed to sync history for date ${result.date}:`, error);
             console.error("Error details:", error instanceof Error ? error.message : String(error));
           }
+        }
+
+        // Update user stats with streak and last completed date
+        // For login, we need to fetch all results from DB because user might have games from other devices
+        try {
+          const allResults = await db.getAllPuzzleResults(username);
+          const { currentStreak, lastCompletedDate } = computeCurrentStreakFromHistory(allResults);
+          if (lastCompletedDate) {
+            await db.updateUserStats(username, currentStreak, lastCompletedDate);
+          }
+        } catch (error) {
+          // Log but don't fail login if stats update fails
+          console.error(`Failed to update user stats for ${username}:`, error);
         }
       }
 

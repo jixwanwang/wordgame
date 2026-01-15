@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { NUM_GUESSES } from "@shared/lib/game-utils";
-import { getCurrentStreak } from "@/lib/game-storage";
 
 interface GameOverStatsProps {
   won: boolean;

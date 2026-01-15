@@ -7,7 +7,6 @@ function Router() {
     <Switch>
       <Route path="/" component={() => <Game difficulty="normal" />} />
       <Route path="/hard" component={() => <Game difficulty="hard" />} />
-      <Route path="/practice" component={() => <Game difficulty="practice" />} />
       <Route component={() => <Game difficulty="normal" />} />
     </Switch>
   );
