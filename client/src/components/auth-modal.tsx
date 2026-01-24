@@ -132,7 +132,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="choose a name"
+              placeholder={mode === "register" ? "choose a name" : "your username"}
               required
               minLength={3}
               maxLength={16}
@@ -153,7 +153,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="at least 10 characters"
+                placeholder={mode === "register" ? "at least 10 characters" : "your password"}
                 required
                 minLength={10}
                 disabled={loading}
