@@ -1,54 +1,134 @@
 import * as React from "react";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { CrosswordGrid } from "@/components/crossword-grid";
 import { GameStats } from "@/components/game-stats";
 import { GameKeyboard } from "@/components/game-keyboard";
-import { HowToPlayModal } from "@/components/how-to-play-modal";
 import { DebugHistoryModal } from "@/components/debug-history-modal";
 import { GameOverStats } from "@/components/game-over-stats";
-import { useGameState } from "@/hooks/use-game-state";
-import { useLongPress } from "@/hooks/use-long-press";
+import { AuthModal } from "@/components/auth-modal";
+import { StatsModal } from "@/components/stats-modal";
 import { SquareInput } from "@/components/square-input";
-import { HelpCircle } from "lucide-react";
+import { CircleUserRound, UserRound, ChartColumnBig, LogOut } from "lucide-react";
 import { getGameNumber, NUM_GUESSES, calculateRevealedLetterCount } from "@shared/lib/game-utils";
-import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { isValidWord } from "@shared/lib/all_words";
+import { API, Auth } from "@/lib/api-client";
+import { getGameHistory } from "@/lib/game-storage";
+import { Grid8x8 } from "@shared/lib/grid";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchPuzzleThunk, makeGuessThunk } from "@/store/thunks/gameThunks";
+import { handleLoginSuccess, handleLogout } from "@/store/thunks/authThunks";
+import {
+  selectGameState,
+  selectGameStatus,
+  selectGuessedLetters,
+  selectTotalGuessesRemaining,
+  selectCurrentStreak,
+} from "@/store/selectors/gameSelectors";
+import {
+  selectCurrentPuzzle,
+  selectIsLoading,
+} from "@/store/selectors/puzzleSelectors";
+import { selectRevealedCells, selectRevealedLetters, selectRevealedCount } from "@/store/selectors/gridSelectors";
+import { setDifficulty } from "@/store/slices/gameSlice";
 
 // separate the storage layer with a proper api for actions rather than whole state updates
 // use the error popup for tutorial. start with guess a letter (and give a suggestion that will guarantee multiple)
 // prompt users to guess a word if they get close to a word (2 letters off), like g_ar_ or something
 
 interface GameProps {
-  difficulty: "normal" | "hard" | "practice";
+  difficulty: "normal" | "hard";
 }
 
 export default function Game({ difficulty }: GameProps) {
-  const {
-    gameState,
-    grid,
-    makeGuess,
-    isLetterRevealed,
-    getKeyboardLetterState,
-    currentPuzzle,
-    resetGame,
-  } = useGameState(difficulty);
+  const dispatch = useAppDispatch();
+
+  // Redux state
+  const gameState = useAppSelector(selectGameState);
+  const gameStatus = useAppSelector(selectGameStatus);
+  const guessedLetters = useAppSelector(selectGuessedLetters);
+  const totalGuessesRemaining = useAppSelector(selectTotalGuessesRemaining);
+  const currentStreak = useAppSelector(selectCurrentStreak);
+  const currentPuzzle = useAppSelector(selectCurrentPuzzle);
+  const isLoading = useAppSelector(selectIsLoading);
+  const revealedCells = useAppSelector(selectRevealedCells);
+  const revealedLetters = useAppSelector(selectRevealedLetters);
+  const revealedCount = useAppSelector(selectRevealedCount);
+
+  // Create Grid8x8 instance and keep it in sync with Redux state
+  const grid = useMemo(() => {
+    const newGrid = new Grid8x8();
+
+    // Load puzzle if available
+    if (currentPuzzle) {
+      newGrid.loadPuzzle(currentPuzzle);
+
+      // Sync revealed state from Redux
+      revealedLetters.forEach((letter) => {
+        newGrid.revealLetter(letter);
+      });
+    }
+
+    return newGrid;
+  }, [currentPuzzle, revealedLetters]);
+
+  // Load puzzle and set difficulty on mount/difficulty change
+  useEffect(() => {
+    dispatch(setDifficulty(difficulty));
+    dispatch(fetchPuzzleThunk({ difficulty }));
+  }, [difficulty, dispatch]);
 
   const [inputValue, setInputValue] = useState("");
-  const [showHowToPlay, setShowHowToPlay] = useState(false);
   const [showDebugHistory, setShowDebugHistory] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showStatsModal, setShowStatsModal] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  // Show how to play modal for first-time users
+  // Show auth modal if not logged in, and refresh token if needed
   useEffect(() => {
-    const hasHistory = localStorage.getItem("wordgame-history");
-    if (!hasHistory) {
-      setTimeout(() => {
-        setShowHowToPlay(true);
-      }, 1000);
-    }
-  }, []);
+    const checkAuth = async () => {
+      // if the user is not authenticated and has game history, pop up the register/login modal.
+      if (!Auth.isAuthenticated()) {
+        if (getGameHistory().lastCompletedDate != null) {
+          setTimeout(() => {
+            setShowAuthModal(true);
+          }, 500);
+        }
+        return;
+      }
+
+      // Check if token should be refreshed (5 days or less remaining)
+      if (Auth.shouldRefreshToken()) {
+        const refreshed = await API.refreshToken();
+        if (!refreshed) {
+          // Refresh failed, log the user out
+          dispatch(handleLogout());
+          setTimeout(() => {
+            setShowAuthModal(true);
+          }, 500);
+          return;
+        }
+      } else {
+        // Token doesn't need refresh yet, but verify it's still valid
+        const isValid = await API.checkAuthToken();
+        if (!isValid) {
+          dispatch(handleLogout());
+          setTimeout(() => {
+            setShowAuthModal(true);
+          }, 500);
+          return;
+        }
+      }
+    };
+
+    checkAuth();
+  }, [dispatch]);
 
   const showToast = useCallback((text: string) => {
     // Clear any existing timeout
@@ -63,29 +143,26 @@ export default function Game({ difficulty }: GameProps) {
     }, 1500);
   }, []);
 
-  // Long press handlers for help button
-  const helpButtonHandlers = useLongPress({
-    onShortPress: () => setShowHowToPlay(true),
-    onLongPress: () => setShowDebugHistory(true),
-  });
-
-  const revealedCount = grid.getRevealedCount();
+  // Open stats modal
+  const handleFetchHistory = () => {
+    setShowStatsModal(true);
+  };
 
   const handleGuess = useCallback(() => {
-    if (gameState.gameStatus !== "playing") return;
+    if (gameStatus !== "playing") return;
 
     const guess = inputValue.trim().toUpperCase();
     if (!guess) return;
 
     if (guess.length === 1) {
-      if (gameState.guessedLetters.includes(guess)) {
+      if (guessedLetters.includes(guess)) {
         showToast(`Already guessed`);
         return;
       }
-      makeGuess({ type: "letter", value: guess });
+      dispatch(makeGuessThunk({ type: "letter", value: guess }));
     } else {
       // without any revealed letters, we shouldn't allow guessing any words
-      if (gameState.guessedLetters.length === 0 || revealedCount === 0) {
+      if (guessedLetters.length === 0 || revealedCount === 0) {
         showToast("Guess a letter first!");
         return;
       }
@@ -96,22 +173,22 @@ export default function Game({ difficulty }: GameProps) {
         showToast(`Not in the word list`);
         return;
       }
-      makeGuess({ type: "word", value: guess });
+      dispatch(makeGuessThunk({ type: "word", value: guess }));
     }
 
     setInputValue("");
   }, [
     inputValue,
-    gameState.guessedLetters,
-    makeGuess,
+    guessedLetters,
+    dispatch,
     showToast,
-    gameState.gameStatus,
+    gameStatus,
     revealedCount,
   ]);
 
   const handleLetterClick = useCallback(
     (letter: string) => {
-      if (gameState.gameStatus !== "playing") return;
+      if (gameStatus !== "playing") return;
       setInputValue((prev) => {
         if (prev.length < 6) {
           return prev + letter;
@@ -121,18 +198,38 @@ export default function Game({ difficulty }: GameProps) {
         }
       });
     },
-    [gameState.gameStatus, showToast],
+    [gameStatus, showToast],
   );
 
   const handleBackspaceClick = useCallback(() => {
-    if (gameState.gameStatus !== "playing") return;
+    if (gameStatus !== "playing") return;
     setInputValue((prev) => prev.slice(0, -1));
-  }, [gameState.gameStatus]);
+  }, [gameStatus]);
+
+  // Callback for isLetterRevealed (for CrosswordGrid)
+  const isLetterRevealed = useCallback(
+    (row: number, col: number): boolean => {
+      return revealedCells[row]?.[col] || false;
+    },
+    [revealedCells],
+  );
+
+  // Callback for getKeyboardLetterState (for GameKeyboard)
+  const getKeyboardLetterState = useCallback(
+    (letter: string): "default" | "absent" | "revealed" => {
+      const upperLetter = letter.toUpperCase();
+      if (revealedLetters.includes(upperLetter)) return "revealed";
+      if (guessedLetters.includes(upperLetter)) return "absent";
+      return "default";
+    },
+    [revealedLetters, guessedLetters],
+  );
 
   // Handle keyboard input
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (gameState.gameStatus !== "playing") return;
+      if (showAuthModal) return;
+      if (gameStatus !== "playing") return;
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       if (e.key === "Enter") {
         handleGuess();
@@ -160,62 +257,90 @@ export default function Game({ difficulty }: GameProps) {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleGuess, handleBackspaceClick, gameState.gameStatus, showToast]);
+  }, [handleGuess, handleBackspaceClick, gameStatus, showToast, showAuthModal]);
 
-  if (currentPuzzle == null) {
-    return null;
+  if (isLoading || currentPuzzle == null) {
+    return (
+      <div className="bg-white font-game min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-gray-600">Loading puzzle...</div>
+        </div>
+      </div>
+    );
   }
   const puzzleNumber = getGameNumber(currentPuzzle.date);
 
   return (
     <div className="bg-white font-game min-h-screen">
       {/* Header */}
-      <header className="text-center py-3" data-testid="game-header">
-        <div className="flex items-center justify-center gap-3">
-          <div className="flex items-center gap-1">
-            <h1 className="text-2xl sm:text-3xl font-bold text-dark">
-              Crosses {difficulty !== "practice" ? `#${puzzleNumber}` : ""}
-            </h1>
+      <header className="text-center py-3 px-4 max-w-[440px] mx-auto" data-testid="game-header">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="flex items-end gap-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-dark">Crosses</h1>
+              <h2 className="pb-1">#{puzzleNumber}</h2>
+            </div>
           </div>
-          <button
-            {...helpButtonHandlers}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
-            data-testid="help-button"
-            aria-label="How to play"
-          >
-            <HelpCircle className="w-6 h-6" />
-          </button>
-          {/* <button
-            onClick={() => setShowDebugHistory(true)}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-            data-testid="debug-button"
-            aria-label="Debug history"
-          >
-            <Bug className="w-5 h-5" />
-          </button> */}
-          {difficulty === "practice" && (
-            <span
-              className="text-xs text-gray-500 px-2 py-1 rounded-sm bg-blue-300 font-medium"
-              data-testid="practice-subtitle"
-              onClick={() => {
-                window.location.reload();
-              }}
-            >
-              practice
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {Auth.isAuthenticated() && (
+              <div className="flex items-center gap-2 ml-2">
+                <span className="text-sm text-gray-600">{Auth.getUsername()}</span>
+              </div>
+            )}
+            {Auth.isAuthenticated() ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="text-gray-500 hover:text-gray-700 transition-colors"
+                    data-testid="user-menu-button"
+                    aria-label="User menu"
+                  >
+                    <CircleUserRound className="w-6 h-6" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleFetchHistory}>
+                    <ChartColumnBig className="w-4 h-4 mr-2" />
+                    Stats
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      dispatch(handleLogout());
+                    }}
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+                data-testid="login-button"
+                aria-label="Login"
+              >
+                <UserRound className="w-6 h-6" />
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
-      {/* How to Play Modal */}
-      <HowToPlayModal
-        open={showHowToPlay}
-        onOpenChange={setShowHowToPlay}
-        isPractice={gameState.difficulty === "practice"}
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={() => {
+          dispatch(handleLoginSuccess());
+        }}
       />
 
       {/* Debug History Modal */}
       <DebugHistoryModal open={showDebugHistory} onOpenChange={setShowDebugHistory} />
+
+      {/* Stats Modal */}
+      <StatsModal open={showStatsModal} onOpenChange={setShowStatsModal} />
 
       <main className="container mx-auto px-2 sm:px-4 pb-4 max-w-2xl">
         <div className="relative">
@@ -245,7 +370,7 @@ export default function Game({ difficulty }: GameProps) {
                   <button
                     onClick={handleGuess}
                     disabled={!inputValue}
-                    className="px-2 py-1 bg-gray-200 hover:bg-gray-300 border-2 border-gray-300 rounded-lg text-sm font-bold text-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-200"
+                    className="px-2 py-1 bg-gray-200 hover:bg-gray-300 border-2 border-gray-300 rounded-sm text-sm font-bold text-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-200"
                     data-testid="guess-button"
                   >
                     {inputValue.length <= 1 ? "GUESS" : "GUESS WORD"}
@@ -265,42 +390,25 @@ export default function Game({ difficulty }: GameProps) {
             ) : null}
 
             {/* On-screen Keyboard or Game Over Stats */}
-            {gameState.gameStatus === "playing" ? (
+            {gameStatus === "playing" ? (
               <GameKeyboard
                 onLetterClick={handleLetterClick}
                 onBackspaceClick={handleBackspaceClick}
                 getLetterState={getKeyboardLetterState}
               />
-            ) : gameState.difficulty !== "practice" ? (
+            ) : (
               <div className="mb-2 flex flex-col items-center gap-4">
                 <GameStats gameState={gameState} grid={grid} />
                 <GameOverStats
-                  won={gameState.gameStatus === "won"}
-                  numGuesses={NUM_GUESSES - gameState.totalGuessesRemaining}
+                  won={gameStatus === "won"}
+                  numGuesses={NUM_GUESSES - totalGuessesRemaining}
                   totalLettersRevealed={calculateRevealedLetterCount(
                     currentPuzzle.words,
-                    grid.getRevealedLetters(),
+                    revealedLetters,
                   )}
                   puzzleNumber={puzzleNumber}
+                  currentStreak={currentStreak}
                 />
-              </div>
-            ) : (
-              <div className="flex gap-4">
-                <Button
-                  className="bg-gray-600 mt-4 hover:bg-gray-700 text-white"
-                  onClick={() => resetGame}
-                  data-testid="practice-button"
-                >
-                  {"Practice again"}
-                </Button>
-                <Link href={"/"}>
-                  <Button
-                    className="bg-gray-600 mt-4 hover:bg-gray-700 text-white"
-                    onClick={() => {}}
-                  >
-                    {"Back to today's puzzle"}
-                  </Button>
-                </Link>
               </div>
             )}
           </div>

@@ -1,13 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { NUM_GUESSES } from "@shared/lib/game-utils";
-import { getCurrentStreak } from "@/lib/game-storage";
 
 interface GameOverStatsProps {
   won: boolean;
   numGuesses: number;
   totalLettersRevealed: number;
   puzzleNumber: number;
+  currentStreak: number;
 }
 
 export function GameOverStats({
@@ -15,9 +15,9 @@ export function GameOverStats({
   numGuesses,
   totalLettersRevealed,
   puzzleNumber,
+  currentStreak,
 }: GameOverStatsProps) {
   const [copied, setCopied] = useState(false);
-  const currentStreak = getCurrentStreak();
 
   const shareText = () => {
     return won

@@ -12,8 +12,9 @@ export interface GameState {
   totalGuessesRemaining: number;
   gameStatus: "playing" | "won" | "lost";
   guessedLetters: string[];
+  guesses: string[]; // Array of all guesses made (letters or words)
   currentPuzzle: string;
-  difficulty: "normal" | "hard" | "practice";
+  difficulty: "normal" | "hard";
   currentStreak: number;
 }
 
@@ -21,6 +22,22 @@ export interface SavedGameState {
   date: string;
   guessesRemaining: number;
   guessedLetters: string[];
+  guesses?: string[]; // Array of guess inputs (letters or words) - optional for backward compatibility
   isComplete: boolean;
   wonGame: boolean;
+}
+
+export interface GameHistory {
+  games: Record<string, SavedGameState>;
+  currentStreak: number;
+  lastCompletedDate: string | null;
+}
+
+export interface Stats {
+  firstGame: string | null;
+  bestStreak: { dateEnded: string; streak: number } | null;
+  bestGame: { date: string; guesses: number } | null;
+  favoriteFirstGuess: { guess: string; percent: number } | null;
+  numGames: number;
+  numWon: number;
 }

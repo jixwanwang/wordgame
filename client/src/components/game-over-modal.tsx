@@ -8,6 +8,7 @@ interface GameOverModalProps {
   numGuesses: number;
   totalLettersRevealed: number;
   puzzleNumber: number;
+  currentStreak: number;
 }
 
 export function GameOverModal({
@@ -17,6 +18,7 @@ export function GameOverModal({
   numGuesses,
   totalLettersRevealed,
   puzzleNumber,
+  currentStreak,
 }: GameOverModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -33,6 +35,7 @@ export function GameOverModal({
             numGuesses={numGuesses}
             totalLettersRevealed={totalLettersRevealed}
             puzzleNumber={puzzleNumber}
+            currentStreak={currentStreak}
           />
         </div>
       </DialogContent>

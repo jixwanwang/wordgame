@@ -2,6 +2,7 @@ import { getRandomWord } from "./lib/dictionary";
 import Grid8x8 from "./lib/grid";
 import { Difficulty, Puzzle } from "./lib/puzzles_types";
 import { validate_puzzle } from "./test_puzzle";
+import { parseDate } from "./lib/game-utils";
 import * as fs from "fs";
 
 // Scrabble letter scores
@@ -272,8 +273,7 @@ export function generatePuzzlesForDateRange(
   difficulty: Difficulty,
   numPuzzles: number,
 ): void {
-  const [month, day, year] = startDate.split("-").map(Number);
-  const currentDate = new Date(year, month - 1, day);
+  const currentDate = parseDate(startDate);
 
   const puzzles: Puzzle[] = [];
 
