@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { isValidWord } from "@shared/lib/all_words";
+import { isValidWord } from "@shared/lib/dictionary";
 import { API, Auth } from "@/lib/api-client";
 import { getGameHistory } from "@/lib/game-storage";
 import { Grid8x8 } from "@shared/lib/grid";
@@ -30,11 +30,12 @@ import {
   selectTotalGuessesRemaining,
   selectCurrentStreak,
 } from "@/store/selectors/gameSelectors";
+import { selectCurrentPuzzle, selectIsLoading } from "@/store/selectors/puzzleSelectors";
 import {
-  selectCurrentPuzzle,
-  selectIsLoading,
-} from "@/store/selectors/puzzleSelectors";
-import { selectRevealedCells, selectRevealedLetters, selectRevealedCount } from "@/store/selectors/gridSelectors";
+  selectRevealedCells,
+  selectRevealedLetters,
+  selectRevealedCount,
+} from "@/store/selectors/gridSelectors";
 import { setDifficulty } from "@/store/slices/gameSlice";
 
 // separate the storage layer with a proper api for actions rather than whole state updates
@@ -177,14 +178,7 @@ export default function Game({ difficulty }: GameProps) {
     }
 
     setInputValue("");
-  }, [
-    inputValue,
-    guessedLetters,
-    dispatch,
-    showToast,
-    gameStatus,
-    revealedCount,
-  ]);
+  }, [inputValue, guessedLetters, dispatch, showToast, gameStatus, revealedCount]);
 
   const handleLetterClick = useCallback(
     (letter: string) => {

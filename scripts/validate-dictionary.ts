@@ -11,7 +11,7 @@ function validateDictionary() {
 
   // Validate word lengths in DICTIONARY
   console.log("\nValidating words in DICTIONARY...");
-  for (const length of [4, 5, 6, 7]) {
+  for (const length of [3, 4, 5, 6, 7]) {
     const words = getWordsByLength(length);
 
     const wordSet = new Set();
@@ -37,15 +37,19 @@ function validateDictionary() {
 
   // Get all words from DICTIONARY and filter to 4, 5, 6 letter words
   console.log("\nValidating DICTIONARY against spell-check dictionary...");
-  const dictionaryWords = getAllWords().filter((word) => word.length >= 4 && word.length <= 6);
+  const dictionaryWords = getAllWords().filter((word) => word.length >= 3 && word.length <= 7);
 
+  const dictWords3 = dictionaryWords.filter((w) => w.length === 3);
   const dictWords4 = dictionaryWords.filter((w) => w.length === 4);
   const dictWords5 = dictionaryWords.filter((w) => w.length === 5);
   const dictWords6 = dictionaryWords.filter((w) => w.length === 6);
+  const dictWords7 = dictionaryWords.filter((w) => w.length === 7);
 
+  console.log(`  Checking ${dictWords3.length} 3-letter words from DICTIONARY...`);
   console.log(`  Checking ${dictWords4.length} 4-letter words from DICTIONARY...`);
   console.log(`  Checking ${dictWords5.length} 5-letter words from DICTIONARY...`);
   console.log(`  Checking ${dictWords6.length} 6-letter words from DICTIONARY...`);
+  console.log(`  Checking ${dictWords7.length} 7-letter words from DICTIONARY...`);
 
   for (const word of dictionaryWords) {
     totalChecked++;

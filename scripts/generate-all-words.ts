@@ -16,27 +16,23 @@ async function generateAllWordsFile() {
 
   console.log(`Total words in scrabble dictionary: ${scrabbleWords.length}`);
 
-  // Filter to only 4, 5, and 6 letter words
+  // Filter to only 3, 4, 5, and 6, 7 letter words
   const filteredScrabbleWords = scrabbleWords.filter(
-    (word) => word.length >= 4 && word.length <= 6,
+    (word) => word.length >= 3 && word.length <= 7,
   );
 
   console.log(`Filtered to 4-6 letter words: ${filteredScrabbleWords.length}`);
 
   // Load existing game dictionaries to ensure all puzzle words are included
   console.log("\nLoading game dictionaries...");
-  const dictionaryModule = await import(path.join(__dirname, "..", "dictionary.ts"));
+  const dictionaryModule = await import(path.join(__dirname, "../lib/", "dictionary.ts"));
   const DICTIONARY = dictionaryModule.DICTIONARY;
-  const UNCOMMON_DICTIONARY = dictionaryModule.UNCOMMON_DICTIONARY;
 
-  // Collect all words from game dictionaries (4, 5, 6 letter words only)
+  // Collect all words from game dictionaries (3, 4, 5, 6, 7 letter words only)
   const gameWords = new Set<string>();
-  for (const length of [4, 5, 6]) {
+  for (const length of [3, 4, 5, 6, 7]) {
     if (DICTIONARY[length]) {
       DICTIONARY[length].forEach((word) => gameWords.add(word.toUpperCase()));
-    }
-    if (UNCOMMON_DICTIONARY[length]) {
-      UNCOMMON_DICTIONARY[length].forEach((word) => gameWords.add(word.toUpperCase()));
     }
   }
 
@@ -47,14 +43,16 @@ async function generateAllWordsFile() {
   const allWords = Array.from(allWordsSet).sort();
 
   console.log(`\nTotal unique words after merging: ${allWords.length}`);
+  console.log(`  3-letter words: ${allWords.filter((w) => w.length === 3).length}`);
   console.log(`  4-letter words: ${allWords.filter((w) => w.length === 4).length}`);
   console.log(`  5-letter words: ${allWords.filter((w) => w.length === 5).length}`);
   console.log(`  6-letter words: ${allWords.filter((w) => w.length === 6).length}`);
+  console.log(`  7-letter words: ${allWords.filter((w) => w.length === 7).length}`);
 
   // Create the TypeScript file content
   const tsContent = `// Auto-generated file - do not edit manually
 // Generated from TWL Scrabble Dictionary + game dictionaries
-// Contains all valid 4, 5, and 6 letter words for spell checking
+// Contains all valid 3, 4, 5, and 6, 7 letter words for spell checking
 
 export const ALL_WORDS = new Set<string>([
 ${allWords.map((word) => `"${word}",`).join("\n")}

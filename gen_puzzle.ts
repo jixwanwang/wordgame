@@ -133,14 +133,7 @@ function placeWord(
   return null;
 }
 
-export function generate_puzzle_internal(difficulty: Difficulty): Puzzle | null {
-  const words =
-    difficulty === "practice"
-      ? [getRandomWord(4), getRandomWord(4), getRandomWord(4)]
-      : difficulty === "normal"
-        ? [getRandomWord(6), getRandomWord(5), getRandomWord(5), getRandomWord(4)]
-        : [getRandomWord(7), getRandomWord(6), getRandomWord(6), getRandomWord(5)];
-
+export function generate_puzzle_internal(difficulty: Difficulty, words: string[]): Puzzle | null {
   const letterCounts = {};
   let overlapCount = 0;
   words.forEach((word) => {
@@ -235,9 +228,25 @@ export function generate_puzzle_internal(difficulty: Difficulty): Puzzle | null 
   return null;
 }
 
-function generate_puzzle(difficulty: Difficulty): Puzzle | null {
+function generate_puzzle(difficulty: Difficulty, seed: number): Puzzle | null {
   while (true) {
-    const puzzle = generate_puzzle_internal(difficulty);
+    let words: string[] = [];
+
+    // we want to alternate between the 5,5,5,5 word case and the other word cases.
+    if (difficulty === "practice") {
+      words = [getRandomWord(5), getRandomWord(4)];
+    } else if (difficulty === "normal") {
+      words =
+        seed % 2 === 0
+          ? [getRandomWord(5), getRandomWord(5), getRandomWord(5), getRandomWord(5)]
+          : Math.random() < 0.5
+            ? [getRandomWord(7), getRandomWord(5), getRandomWord(5), getRandomWord(3)]
+            : [getRandomWord(6), getRandomWord(5), getRandomWord(5), getRandomWord(4)];
+    } else {
+      words = [getRandomWord(7), getRandomWord(6), getRandomWord(6), getRandomWord(5)];
+    }
+
+    const puzzle = generate_puzzle_internal(difficulty, words);
     if (puzzle != null) {
       return puzzle;
     }
@@ -282,7 +291,7 @@ export function generatePuzzlesForDateRange(
       `Generating puzzle ${i + 1}/${numPuzzles} for ${currentDate.toLocaleDateString("en-US")}`,
     );
 
-    const puzzle = generate_puzzle(difficulty);
+    const puzzle = generate_puzzle(difficulty, i);
 
     if (puzzle) {
       // Format date as mm-dd-yyyy
@@ -319,4 +328,4 @@ export default PUZZLES;
 }
 
 // console.log(UNCOMMON_DICTIONARY[4].length, UNCOMMON_DICTIONARY[5].length, UNCOMMON_DICTIONARY[6].length, UNCOMMON_DICTIONARY[7].length);
-generatePuzzlesForDateRange("12-25-2025", "normal", 60);
+generatePuzzlesForDateRange("01-25-2026", "normal", 60);
