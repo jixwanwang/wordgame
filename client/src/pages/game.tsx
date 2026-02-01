@@ -91,6 +91,9 @@ export default function Game({ difficulty }: GameProps) {
   const [toastMessage, setToastMessage] = useState("");
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
+  const longestWordInPuzzle =
+    currentPuzzle?.words.reduce((max, word) => Math.max(max, word.length), 0) ?? 7;
+
   // Show auth modal if not logged in, and refresh token if needed
   useEffect(() => {
     const checkAuth = async () => {
@@ -167,8 +170,8 @@ export default function Game({ difficulty }: GameProps) {
         showToast("Guess a letter first!");
         return;
       }
-      if (guess.length < 4) {
-        showToast(`Words are at least 4 letters`);
+      if (guess.length < 3) {
+        showToast(`Words are at least 3 letters`);
         return;
       } else if (!isValidWord(guess)) {
         showToast(`Not in the word list`);
@@ -184,15 +187,15 @@ export default function Game({ difficulty }: GameProps) {
     (letter: string) => {
       if (gameStatus !== "playing") return;
       setInputValue((prev) => {
-        if (prev.length < 6) {
+        if (prev.length < longestWordInPuzzle) {
           return prev + letter;
         } else {
-          showToast("Longest word is 6 letters");
+          showToast(`Longest word is ${longestWordInPuzzle} letters`);
           return prev;
         }
       });
     },
-    [gameStatus, showToast],
+    [gameStatus, showToast, longestWordInPuzzle],
   );
 
   const handleBackspaceClick = useCallback(() => {
@@ -233,11 +236,11 @@ export default function Game({ difficulty }: GameProps) {
         // Only add single letter characters
         const letter = e.key.toUpperCase();
         setInputValue((prev) => {
-          // Limit to 6 characters max (longest word is 6 letters)
-          if (prev.length < 6) {
+          // Limit to longest word in the puzzle
+          if (prev.length < longestWordInPuzzle) {
             return prev + letter;
           } else {
-            showToast("Longest word is 6 letters");
+            showToast(`Longest word is ${longestWordInPuzzle} letters`);
             return prev;
           }
         });
@@ -251,7 +254,14 @@ export default function Game({ difficulty }: GameProps) {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleGuess, handleBackspaceClick, gameStatus, showToast, showAuthModal]);
+  }, [
+    handleGuess,
+    handleBackspaceClick,
+    gameStatus,
+    showToast,
+    showAuthModal,
+    longestWordInPuzzle,
+  ]);
 
   if (isLoading || currentPuzzle == null) {
     return (
@@ -353,7 +363,7 @@ export default function Game({ difficulty }: GameProps) {
               <div className="relative w-full mb-3 flex flex-col gap-3">
                 {/* Square input - centered */}
                 <div className="flex justify-center">
-                  <SquareInput value={inputValue} maxLength={6} />
+                  <SquareInput value={inputValue} maxLength={longestWordInPuzzle} />
                 </div>
 
                 {/* Guesses and button row */}
