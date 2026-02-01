@@ -156,7 +156,7 @@ export function verifyAuthTokenWithStatus(token: string): {
     const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
     return { payload: decoded, status: "valid" };
   } catch (error) {
-    if (error instanceof jwt.TokenExpiredError || (error as any)?.name === 'TokenExpiredError') {
+    if (error instanceof jwt.TokenExpiredError) {
       return { payload: null, status: "expired" };
     }
     return { payload: null, status: "invalid" };
