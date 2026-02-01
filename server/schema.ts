@@ -1,4 +1,13 @@
-import { pgTable, varchar, text, timestamp, boolean, integer, primaryKey } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  varchar,
+  text,
+  timestamp,
+  boolean,
+  integer,
+  serial,
+  primaryKey,
+} from "drizzle-orm/pg-core";
 
 /**
  * Users table
@@ -6,7 +15,7 @@ import { pgTable, varchar, text, timestamp, boolean, integer, primaryKey } from 
  */
 export const users = pgTable("users", {
   // Lowercase username for case-insensitive lookups
-  username: varchar("username", { length: 50 }).primaryKey(),
+  username: varchar("username", { length: 16 }).primaryKey(),
   // Original username with preserved casing for display
   originalUsername: varchar("original_username", { length: 50 }).notNull(),
   // bcrypt hashed password
@@ -23,7 +32,7 @@ export const results = pgTable(
   "results",
   {
     // Username (lowercase, references users table)
-    username: varchar("username", { length: 50 })
+    username: varchar("username", { length: 16 })
       .notNull()
       .references(() => users.username, { onDelete: "cascade" }),
     // Puzzle date in MM-DD-YYYY format
@@ -49,7 +58,7 @@ export const results = pgTable(
  */
 export const userStats = pgTable("user_stats", {
   // Username (lowercase, references users table)
-  username: varchar("username", { length: 50 })
+  username: varchar("username", { length: 16 })
     .primaryKey()
     .references(() => users.username, { onDelete: "cascade" }),
   // Current win streak
@@ -60,9 +69,44 @@ export const userStats = pgTable("user_stats", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+/**
+ * Groups table
+ * Stores named groups that users can belong to
+ */
+export const groups = pgTable("groups", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 64 }).notNull(),
+  creatorUsername: varchar("creator_username", { length: 16 })
+    .notNull()
+    .references(() => users.username, { onDelete: "cascade" }),
+});
+
+/**
+ * User groups junction table
+ * Maps users to groups (many-to-many)
+ */
+export const userGroups = pgTable(
+  "user_groups",
+  {
+    groupId: integer("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    username: varchar("username", { length: 16 })
+      .notNull()
+      .references(() => users.username, { onDelete: "cascade" }),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.groupId, table.username] }),
+  }),
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Result = typeof results.$inferSelect;
 export type NewResult = typeof results.$inferInsert;
 export type UserStats = typeof userStats.$inferSelect;
 export type NewUserStats = typeof userStats.$inferInsert;
+export type Group = typeof groups.$inferSelect;
+export type NewGroup = typeof groups.$inferInsert;
+export type UserGroup = typeof userGroups.$inferSelect;
+export type NewUserGroup = typeof userGroups.$inferInsert;

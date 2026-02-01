@@ -369,7 +369,7 @@ export default function Game({ difficulty }: GameProps) {
                 {/* Guesses and button row */}
                 <div className="flex items-center justify-between">
                   <div className="flex-1 flex justify-start pl-1">
-                    <GameStats gameState={gameState} grid={grid} />
+                    <GameStats gameState={gameState} />
                   </div>
                   <button
                     onClick={handleGuess}
@@ -402,7 +402,7 @@ export default function Game({ difficulty }: GameProps) {
               />
             ) : (
               <div className="mb-2 flex flex-col items-center gap-4">
-                <GameStats gameState={gameState} grid={grid} />
+                <GameStats gameState={gameState} />
                 <GameOverStats
                   won={gameStatus === "won"}
                   numGuesses={NUM_GUESSES - totalGuessesRemaining}

@@ -572,6 +572,214 @@ export function createApp(db: Database) {
     return res.json({ valid: true });
   });
 
+  // ---- Group endpoints ----
+
+  /**
+   * POST /api/groups
+   * Create a new group. Creator is auto-added as member.
+   */
+  app.post("/api/groups", authenticateToken, async (req: Request, res: Response) => {
+    const username = req.user?.username;
+    if (username == null) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
+
+    const { name } = req.body;
+    if (name == null || typeof name !== "string" || name.trim().length === 0) {
+      return res.status(400).json({ success: false, message: "Group name is required" });
+    }
+
+    try {
+      const group = await db.createGroup(name.trim(), username.toLowerCase());
+      await db.addUserToGroup(group.id, username.toLowerCase());
+      return res.json({ success: true, group });
+    } catch (error) {
+      console.error("Error creating group:", error);
+      return res.status(500).json({ success: false, message: "Failed to create group" });
+    }
+  });
+
+  /**
+   * GET /api/groups
+   * List groups the authenticated user belongs to.
+   */
+  app.get("/api/groups", authenticateToken, async (req: Request, res: Response) => {
+    const username = req.user?.username;
+    if (username == null) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
+
+    try {
+      const groups = await db.getGroupsForUser(username.toLowerCase());
+      return res.json({ success: true, groups });
+    } catch (error) {
+      console.error("Error listing groups:", error);
+      return res.status(500).json({ success: false, message: "Failed to list groups" });
+    }
+  });
+
+  /**
+   * GET /api/groups/:id
+   * Get group details with members. Only members can view.
+   */
+  app.get("/api/groups/:id", authenticateToken, async (req: Request, res: Response) => {
+    const username = req.user?.username;
+    if (username == null) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
+
+    const groupId = parseInt(req.params.id, 10);
+    if (isNaN(groupId)) {
+      return res.status(400).json({ success: false, message: "Invalid group ID" });
+    }
+
+    try {
+      const group = await db.getGroup(groupId);
+      if (group === null) {
+        return res.status(404).json({ success: false, message: "Group not found" });
+      }
+
+      const isMember = await db.isUserInGroup(groupId, username.toLowerCase());
+      if (!isMember) {
+        return res.status(403).json({ success: false, message: "Not a member of this group" });
+      }
+
+      const members = await db.getGroupMembers(groupId);
+      return res.json({ success: true, group: { ...group, members } });
+    } catch (error) {
+      console.error("Error getting group:", error);
+      return res.status(500).json({ success: false, message: "Failed to get group" });
+    }
+  });
+
+  /**
+   * DELETE /api/groups/:id
+   * Delete a group. Only the creator can delete.
+   */
+  app.delete("/api/groups/:id", authenticateToken, async (req: Request, res: Response) => {
+    const username = req.user?.username;
+    if (username == null) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
+
+    const groupId = parseInt(req.params.id, 10);
+    if (isNaN(groupId)) {
+      return res.status(400).json({ success: false, message: "Invalid group ID" });
+    }
+
+    try {
+      const group = await db.getGroup(groupId);
+      if (group === null) {
+        return res.status(404).json({ success: false, message: "Group not found" });
+      }
+
+      if (group.creatorUsername !== username.toLowerCase()) {
+        return res.status(403).json({ success: false, message: "Only the group creator can delete the group" });
+      }
+
+      await db.deleteGroup(groupId);
+      return res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting group:", error);
+      return res.status(500).json({ success: false, message: "Failed to delete group" });
+    }
+  });
+
+  /**
+   * POST /api/groups/:id/members
+   * Add a member to a group. Only existing members can add others.
+   */
+  app.post("/api/groups/:id/members", authenticateToken, async (req: Request, res: Response) => {
+    const username = req.user?.username;
+    if (username == null) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
+
+    const groupId = parseInt(req.params.id, 10);
+    if (isNaN(groupId)) {
+      return res.status(400).json({ success: false, message: "Invalid group ID" });
+    }
+
+    const { username: targetUsername } = req.body;
+    if (targetUsername == null || typeof targetUsername !== "string") {
+      return res.status(400).json({ success: false, message: "username is required" });
+    }
+
+    try {
+      const group = await db.getGroup(groupId);
+      if (group === null) {
+        return res.status(404).json({ success: false, message: "Group not found" });
+      }
+
+      const isMember = await db.isUserInGroup(groupId, username.toLowerCase());
+      if (!isMember) {
+        return res.status(403).json({ success: false, message: "Not a member of this group" });
+      }
+
+      const targetLower = targetUsername.toLowerCase();
+
+      const targetExists = await db.userExists(targetLower);
+      if (!targetExists) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      const alreadyMember = await db.isUserInGroup(groupId, targetLower);
+      if (alreadyMember) {
+        return res.status(409).json({ success: false, message: "User is already a member of this group" });
+      }
+
+      await db.addUserToGroup(groupId, targetLower);
+      return res.json({ success: true });
+    } catch (error) {
+      console.error("Error adding member:", error);
+      return res.status(500).json({ success: false, message: "Failed to add member" });
+    }
+  });
+
+  /**
+   * DELETE /api/groups/:id/members/:username
+   * Remove a member from a group. A user can remove themselves, or the creator can remove anyone.
+   */
+  app.delete("/api/groups/:id/members/:username", authenticateToken, async (req: Request, res: Response) => {
+    const username = req.user?.username;
+    if (username == null) {
+      return res.status(401).json({ success: false, message: "Authentication required" });
+    }
+
+    const groupId = parseInt(req.params.id, 10);
+    if (isNaN(groupId)) {
+      return res.status(400).json({ success: false, message: "Invalid group ID" });
+    }
+
+    const targetUsername = req.params.username.toLowerCase();
+
+    try {
+      const group = await db.getGroup(groupId);
+      if (group === null) {
+        return res.status(404).json({ success: false, message: "Group not found" });
+      }
+
+      const callerLower = username.toLowerCase();
+      const isSelf = callerLower === targetUsername;
+      const isCreator = group.creatorUsername === callerLower;
+
+      if (!isSelf && !isCreator) {
+        return res.status(403).json({ success: false, message: "Only the group creator or the user themselves can remove a member" });
+      }
+
+      const targetIsMember = await db.isUserInGroup(groupId, targetUsername);
+      if (!targetIsMember) {
+        return res.status(404).json({ success: false, message: "User is not a member of this group" });
+      }
+
+      await db.removeUserFromGroup(groupId, targetUsername);
+      return res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing member:", error);
+      return res.status(500).json({ success: false, message: "Failed to remove member" });
+    }
+  });
+
   // Health check endpoint
   app.get("/health", (_req: Request, res: Response) => {
     res.json({ status: "ok" });
