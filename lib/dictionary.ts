@@ -714,6 +714,7 @@ export const DICTIONARY: Record<number, string[]> = {
     "ALTER",
     "AMBER",
     "ANIME",
+    "ANKLE",
     "AMONG",
     "ANGER",
     "ANGLE",
