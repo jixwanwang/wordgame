@@ -853,6 +853,7 @@ export const DICTIONARY: Record<number, string[]> = {
     "EAGER",
     "EARLY",
     "EARTH",
+    "EASEL",
     "EIGHT",
     "ELITE",
     "EMAIL",
