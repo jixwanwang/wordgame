@@ -6,8 +6,8 @@ import pkg from "pg";
 const { Pool } = pkg;
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcrypt";
-import { users, results, userStats } from "./schema.js";
-import type { Database, PuzzleResult, UserStats } from "./db.js";
+import { users, results, userStats, groups, userGroups } from "./schema.js";
+import type { Database, PuzzleResult, UserStats, GroupInfo } from "./db.js";
 
 const SALT_ROUNDS = 10;
 
@@ -219,6 +219,78 @@ export class PostgresDatabase implements Database {
           updatedAt: new Date(),
         },
       });
+  }
+
+  async createGroup(name: string, creatorUsername: string): Promise<GroupInfo> {
+    const result = await this.db
+      .insert(groups)
+      .values({ name, creatorUsername })
+      .returning();
+
+    const row = result[0];
+    return { id: row.id, name: row.name, creatorUsername: row.creatorUsername };
+  }
+
+  async getGroup(groupId: number): Promise<GroupInfo | null> {
+    const result = await this.db
+      .select()
+      .from(groups)
+      .where(eq(groups.id, groupId))
+      .limit(1);
+
+    if (result.length === 0) {
+      return null;
+    }
+
+    const row = result[0];
+    return { id: row.id, name: row.name, creatorUsername: row.creatorUsername };
+  }
+
+  async getGroupsForUser(username: string): Promise<GroupInfo[]> {
+    const rows = await this.db
+      .select({
+        id: groups.id,
+        name: groups.name,
+        creatorUsername: groups.creatorUsername,
+      })
+      .from(userGroups)
+      .innerJoin(groups, eq(userGroups.groupId, groups.id))
+      .where(eq(userGroups.username, username));
+
+    return rows;
+  }
+
+  async deleteGroup(groupId: number): Promise<void> {
+    await this.db.delete(groups).where(eq(groups.id, groupId));
+  }
+
+  async addUserToGroup(groupId: number, username: string): Promise<void> {
+    await this.db.insert(userGroups).values({ groupId, username });
+  }
+
+  async removeUserFromGroup(groupId: number, username: string): Promise<void> {
+    await this.db
+      .delete(userGroups)
+      .where(and(eq(userGroups.groupId, groupId), eq(userGroups.username, username)));
+  }
+
+  async getGroupMembers(groupId: number): Promise<string[]> {
+    const rows = await this.db
+      .select({ username: userGroups.username })
+      .from(userGroups)
+      .where(eq(userGroups.groupId, groupId));
+
+    return rows.map((row) => row.username);
+  }
+
+  async isUserInGroup(groupId: number, username: string): Promise<boolean> {
+    const result = await this.db
+      .select()
+      .from(userGroups)
+      .where(and(eq(userGroups.groupId, groupId), eq(userGroups.username, username)))
+      .limit(1);
+
+    return result.length > 0;
   }
 
   /**

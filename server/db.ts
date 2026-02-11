@@ -18,6 +18,12 @@ export interface UserStats {
   updatedAt: Date;
 }
 
+export interface GroupInfo {
+  id: number;
+  name: string;
+  creatorUsername: string;
+}
+
 export interface Database {
   /**
    * Check if a user exists
@@ -82,6 +88,18 @@ export interface Database {
     currentStreak: number,
     lastCompletedDate: string,
   ): Promise<void>;
+
+  // Groups
+  createGroup(name: string, creatorUsername: string): Promise<GroupInfo>;
+  getGroup(groupId: number): Promise<GroupInfo | null>;
+  getGroupsForUser(username: string): Promise<GroupInfo[]>;
+  deleteGroup(groupId: number): Promise<void>;
+
+  // Group membership
+  addUserToGroup(groupId: number, username: string): Promise<void>;
+  removeUserFromGroup(groupId: number, username: string): Promise<void>;
+  getGroupMembers(groupId: number): Promise<string[]>;
+  isUserInGroup(groupId: number, username: string): Promise<boolean>;
 }
 
 /**
@@ -94,6 +112,9 @@ export class StubDatabase implements Database {
   private users: Map<string, { originalUsername: string; password: string }> = new Map();
   private results: Map<string, PuzzleResult> = new Map(); // `${username}_${date}` -> result
   private userStats: Map<string, UserStats> = new Map(); // lowercase username -> UserStats
+  private groups: Map<number, GroupInfo> = new Map();
+  private groupMembers: Map<number, Set<string>> = new Map();
+  private nextGroupId = 1;
 
   async userExists(username: string): Promise<boolean> {
     return this.users.has(username.toLowerCase());
@@ -138,7 +159,7 @@ export class StubDatabase implements Database {
   async getAllPuzzleResults(username: string): Promise<PuzzleResult[]> {
     const lowerUsername = username.toLowerCase();
     const results: PuzzleResult[] = [];
-    for (const [key, result] of this.results.entries()) {
+    for (const [, result] of this.results.entries()) {
       if (result.username.toLowerCase() === lowerUsername) {
         results.push(result);
       }
@@ -181,5 +202,59 @@ export class StubDatabase implements Database {
       lastCompletedDate,
       updatedAt: new Date(),
     });
+  }
+
+  async createGroup(name: string, creatorUsername: string): Promise<GroupInfo> {
+    const id = this.nextGroupId++;
+    const group: GroupInfo = { id, name, creatorUsername };
+    this.groups.set(id, group);
+    this.groupMembers.set(id, new Set());
+    return group;
+  }
+
+  async getGroup(groupId: number): Promise<GroupInfo | null> {
+    return this.groups.get(groupId) ?? null;
+  }
+
+  async getGroupsForUser(username: string): Promise<GroupInfo[]> {
+    const result: GroupInfo[] = [];
+    for (const [groupId, members] of this.groupMembers.entries()) {
+      if (members.has(username)) {
+        const group = this.groups.get(groupId);
+        if (group !== undefined) {
+          result.push(group);
+        }
+      }
+    }
+    return result;
+  }
+
+  async deleteGroup(groupId: number): Promise<void> {
+    this.groups.delete(groupId);
+    this.groupMembers.delete(groupId);
+  }
+
+  async addUserToGroup(groupId: number, username: string): Promise<void> {
+    const members = this.groupMembers.get(groupId);
+    if (members !== undefined) {
+      members.add(username);
+    }
+  }
+
+  async removeUserFromGroup(groupId: number, username: string): Promise<void> {
+    const members = this.groupMembers.get(groupId);
+    if (members !== undefined) {
+      members.delete(username);
+    }
+  }
+
+  async getGroupMembers(groupId: number): Promise<string[]> {
+    const members = this.groupMembers.get(groupId);
+    return members !== undefined ? Array.from(members) : [];
+  }
+
+  async isUserInGroup(groupId: number, username: string): Promise<boolean> {
+    const members = this.groupMembers.get(groupId);
+    return members !== undefined ? members.has(username) : false;
   }
 }
