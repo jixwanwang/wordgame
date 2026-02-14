@@ -327,5 +327,4 @@ export default PUZZLES;
   console.log(`\nSuccessfully generated ${numPuzzles} puzzles and wrote to ${filePath}`);
 }
 
-// console.log(UNCOMMON_DICTIONARY[4].length, UNCOMMON_DICTIONARY[5].length, UNCOMMON_DICTIONARY[6].length, UNCOMMON_DICTIONARY[7].length);
-generatePuzzlesForDateRange("01-25-2026", "normal", 60);
+generatePuzzlesForDateRange("02-14-2026", "normal", 60);
