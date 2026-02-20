@@ -138,7 +138,7 @@ export class StubDatabase implements Database {
   async getAllPuzzleResults(username: string): Promise<PuzzleResult[]> {
     const lowerUsername = username.toLowerCase();
     const results: PuzzleResult[] = [];
-    for (const [key, result] of this.results.entries()) {
+    for (const result of this.results.values()) {
       if (result.username.toLowerCase() === lowerUsername) {
         results.push(result);
       }

@@ -3,6 +3,8 @@ import Grid8x8 from "./lib/grid";
 import { Difficulty, Puzzle } from "./lib/puzzles_types";
 import { validate_puzzle } from "./test_puzzle";
 import { parseDate } from "./lib/game-utils";
+import PUZZLES_NORMAL from "./lib/puzzles_normal";
+import PUZZLES_HISTORICAL from "./lib/puzzles_normal_historical";
 import * as fs from "fs";
 
 // Scrabble letter scores
@@ -222,7 +224,6 @@ export function generate_puzzle_internal(difficulty: Difficulty, words: string[]
     wordPositions: wordPositions,
   };
   if (validate_puzzle(puzzle)) {
-    console.log(`  Score: ${puzzleScore} points`);
     return puzzle;
   }
   return null;
@@ -255,76 +256,164 @@ function generate_puzzle(difficulty: Difficulty, seed: number): Puzzle | null {
 
 function formatPuzzleOutput(puzzle: Puzzle): string {
   const gridLines = puzzle.grid
-    .map((row) => `            [${row.map((cell) => `"${cell}"`).join(", ")}]`)
+    .map((row) => `      [${row.map((cell) => `"${cell}"`).join(", ")}]`)
     .join(",\n");
 
   const wordPositionLines = Object.entries(puzzle.wordPositions)
     .map(
       ([word, positions]) =>
-        `            "${word}": [${positions.map((pos) => `[${pos[0]}, ${pos[1]}]`).join(", ")}]`,
+        `      "${word}": [${positions.map((pos) => `[${pos[0]}, ${pos[1]}]`).join(", ")}]`,
     )
     .join(",\n");
 
-  return `    {
-        "date": "${puzzle.date}",
-        "words": [${puzzle.words.map((w) => `"${w}"`).join(", ")}],
-        "grid": [
+  return `  {
+    date: "${puzzle.date}",
+    words: [${puzzle.words.map((w) => `"${w}"`).join(", ")}],
+    grid: [
 ${gridLines},
-        ],
-        "wordPositions": {
+    ],
+    wordPositions: {
 ${wordPositionLines},
-        },
-    }`;
+    },
+  }`;
 }
 
-export function generatePuzzlesForDateRange(
-  startDate: string, // mm-dd-yyyy format
-  difficulty: Difficulty,
-  numPuzzles: number,
-): void {
-  const currentDate = parseDate(startDate);
+function formatDate(date: Date): string {
+  return `${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}-${date.getFullYear()}`;
+}
 
-  const puzzles: Puzzle[] = [];
+function compareDates(dateStr1: string, dateStr2: string): number {
+  const d1 = parseDate(dateStr1);
+  const d2 = parseDate(dateStr2);
+  return d1.getTime() - d2.getTime();
+}
 
-  for (let i = 0; i < numPuzzles; i++) {
-    console.log(
-      `Generating puzzle ${i + 1}/${numPuzzles} for ${currentDate.toLocaleDateString("en-US")}`,
-    );
-
-    const puzzle = generate_puzzle(difficulty, i);
-
-    if (puzzle) {
-      // Format date as mm-dd-yyyy
-      const formattedDate = `${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(currentDate.getDate()).padStart(2, "0")}-${currentDate.getFullYear()}`;
-      puzzle.date = formattedDate;
-      puzzles.push(puzzle);
-    }
-
-    // Increment date by one day
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-
-  // Format the puzzles as TypeScript code
+function writePuzzlesFile(filePath: string, puzzles: Puzzle[], variableName: string): void {
   const puzzlesCode = puzzles.map((p) => formatPuzzleOutput(p)).join(",\n");
 
-  const fileContent = `
-// PLEASE DO NOT CHANGE THIS FILE
+  const fileContent = `// PLEASE DO NOT CHANGE THIS FILE
 // IT IS CRITICAL THAT THIS FILE NOT CHANGE OR ELSE THINGS WILL BREAK AND MY GRANDMA WILL BE KILLED
 
 import { Puzzle } from "./puzzles_types";
 
-const PUZZLES: Puzzle[] = [
+const ${variableName}: Puzzle[] = [
 ${puzzlesCode},
 ];
 
-export default PUZZLES;
+export default ${variableName};
 `;
 
-  // Write to the appropriate file
-  const filePath = `./lib/puzzles_${difficulty}.ts`;
-
   fs.writeFileSync(filePath, fileContent, "utf-8");
-  console.log(`\nSuccessfully generated ${numPuzzles} puzzles and wrote to ${filePath}`);
 }
 
-generatePuzzlesForDateRange("02-20-2026", "normal", 60);
+export function generateAndMigratePuzzles(numNewPuzzles: number): void {
+  const today = new Date();
+  const todayStr = formatDate(today);
+
+  console.log(`Today's date: ${todayStr}`);
+  console.log("");
+
+  // File paths for writing
+  const normalPath = "./lib/puzzles_normal.ts";
+  const historicalPath = "./lib/puzzles_normal_historical.ts";
+
+  // Use imported puzzles directly
+  const normalPuzzles = [...PUZZLES_NORMAL];
+  const historicalPuzzles = [...PUZZLES_HISTORICAL];
+
+  console.log(`  Found ${normalPuzzles.length} puzzles in puzzles_normal.ts`);
+  console.log(`  Found ${historicalPuzzles.length} puzzles in puzzles_normal_historical.ts`);
+  console.log("");
+
+  // Split normal puzzles into old (before today) and current (today and future)
+  const oldPuzzles: Puzzle[] = [];
+  const currentPuzzles: Puzzle[] = [];
+
+  for (const puzzle of normalPuzzles) {
+    if (compareDates(puzzle.date, todayStr) < 0) {
+      oldPuzzles.push(puzzle);
+    } else {
+      currentPuzzles.push(puzzle);
+    }
+  }
+
+  console.log(`  ${oldPuzzles.length} puzzles to move to historical`);
+  console.log(`  ${currentPuzzles.length} puzzles to keep in normal`);
+  console.log("");
+
+  // Append old puzzles to historical (avoiding duplicates by date)
+  const historicalDates = new Set(historicalPuzzles.map((p) => p.date));
+  const newHistoricalPuzzles = oldPuzzles.filter((p) => !historicalDates.has(p.date));
+
+  if (newHistoricalPuzzles.length > 0) {
+    console.log(`Appending ${newHistoricalPuzzles.length} puzzles to historical...`);
+    const updatedHistorical = [...historicalPuzzles, ...newHistoricalPuzzles];
+    // Sort by date
+    updatedHistorical.sort((a, b) => compareDates(a.date, b.date));
+    writePuzzlesFile(historicalPath, updatedHistorical, "PUZZLES_HISTORICAL");
+    console.log(`  Historical file now has ${updatedHistorical.length} puzzles`);
+  } else {
+    console.log("No new puzzles to add to historical.");
+  }
+  console.log("");
+
+  // Find the last date in current puzzles to determine where to start generating
+  const startDate = new Date(today);
+  startDate.setDate(startDate.getDate() + 3);
+
+  console.log(`Generating ${numNewPuzzles} new puzzles starting from ${formatDate(startDate)}...`);
+
+  const newPuzzles: Puzzle[] = [];
+  const currentDate = new Date(startDate);
+
+  for (let i = 0; i < numNewPuzzles; i++) {
+    console.log(
+      `Generating puzzle ${i + 1}/${numNewPuzzles} for ${currentDate.toLocaleDateString("en-US")}`,
+    );
+
+    const puzzle = generate_puzzle("normal", i);
+
+    if (puzzle) {
+      puzzle.date = formatDate(currentDate);
+      newPuzzles.push(puzzle);
+    }
+
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  console.log("");
+
+  // Combine current puzzles with new puzzles, with new puzzles overwriting existing ones
+  const puzzlesByDate = new Map<string, Puzzle>();
+
+  // Add current puzzles first
+  for (const puzzle of currentPuzzles) {
+    puzzlesByDate.set(puzzle.date, puzzle);
+  }
+
+  // Add new puzzles, overwriting any existing puzzles with the same date
+  let overwrittenCount = 0;
+  for (const puzzle of newPuzzles) {
+    if (puzzlesByDate.has(puzzle.date)) {
+      overwrittenCount++;
+    }
+    puzzlesByDate.set(puzzle.date, puzzle);
+  }
+
+  if (overwrittenCount > 0) {
+    console.log(`  (Overwrote ${overwrittenCount} existing puzzle(s) with new ones)`);
+  }
+
+  const allNormalPuzzles = Array.from(puzzlesByDate.values());
+  allNormalPuzzles.sort((a, b) => compareDates(a.date, b.date));
+
+  writePuzzlesFile(normalPath, allNormalPuzzles, "PUZZLES");
+
+  console.log(`Successfully wrote ${allNormalPuzzles.length} puzzles to ${normalPath}`);
+  console.log(
+    `  (${currentPuzzles.length} existing + ${newPuzzles.length} new - ${overwrittenCount} overwritten)`,
+  );
+}
+
+// Run with 60 new puzzles by default
+const numPuzzles = process.argv[2] ? parseInt(process.argv[2], 10) : 60;
+generateAndMigratePuzzles(numPuzzles);

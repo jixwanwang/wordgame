@@ -3,13 +3,14 @@ import assert from 'node:assert';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { createApp } from './index.js';
-import type { Database, PuzzleResult } from './db.js';
+import type { Database, PuzzleResult, UserStats } from './db.js';
 import { generateAuthToken, verifyAuthToken } from './auth.js';
 
 // Mock database for testing
 class MockDatabase implements Database {
   private users = new Map<string, { originalUsername: string; password: string }>();
   private results = new Map<string, PuzzleResult>();
+  private userStats = new Map<string, UserStats>();
 
   async userExists(username: string): Promise<boolean> {
     return this.users.has(username.toLowerCase());
@@ -46,19 +47,50 @@ class MockDatabase implements Database {
     return this.results.get(key) || null;
   }
 
+  async getAllPuzzleResults(username: string): Promise<PuzzleResult[]> {
+    const lowerUsername = username.toLowerCase();
+    const results: PuzzleResult[] = [];
+    for (const result of this.results.values()) {
+      if (result.username.toLowerCase() === lowerUsername) {
+        results.push(result);
+      }
+    }
+    return results;
+  }
+
   async insertPuzzleResult(
     username: string,
     date: string,
-    score: number,
-    words: string[]
+    guesses: string[],
+    won: boolean
   ): Promise<void> {
     const key = `${username}_${date}`;
     this.results.set(key, {
       username,
       date,
-      score,
-      words,
+      guesses,
+      numGuesses: guesses.length,
+      won,
       submittedAt: new Date(),
+    });
+  }
+
+  async getUserStats(username: string): Promise<UserStats | null> {
+    const lowerUsername = username.toLowerCase();
+    return this.userStats.get(lowerUsername) || null;
+  }
+
+  async updateUserStats(
+    username: string,
+    currentStreak: number,
+    lastCompletedDate: string
+  ): Promise<void> {
+    const lowerUsername = username.toLowerCase();
+    this.userStats.set(lowerUsername, {
+      username,
+      currentStreak,
+      lastCompletedDate,
+      updatedAt: new Date(),
     });
   }
 
@@ -66,6 +98,7 @@ class MockDatabase implements Database {
   reset() {
     this.users.clear();
     this.results.clear();
+    this.userStats.clear();
   }
 }
 
@@ -127,7 +160,7 @@ describe('API Endpoints', () => {
         .expect('Content-Type', /json/);
 
       assert.strictEqual(response.body.success, false);
-      assert.ok(response.body.message.includes('at least 3 characters'));
+      assert.ok(response.body.errors.username.includes('at least 3 characters'));
     });
 
     test('should fail when username is too long', async () => {
@@ -137,14 +170,14 @@ describe('API Endpoints', () => {
       const response = await request(app)
         .post('/api/register')
         .send({
-          username: 'a'.repeat(21),
+          username: 'a'.repeat(17),
           password: 'password123',
         })
         .expect(400)
         .expect('Content-Type', /json/);
 
       assert.strictEqual(response.body.success, false);
-      assert.ok(response.body.message.includes('at most 20 characters'));
+      assert.ok(response.body.errors.username.includes('at most 16 characters'));
     });
 
     test('should fail when username contains special characters', async () => {
@@ -161,7 +194,7 @@ describe('API Endpoints', () => {
         .expect('Content-Type', /json/);
 
       assert.strictEqual(response.body.success, false);
-      assert.ok(response.body.message.includes('letters and numbers'));
+      assert.ok(response.body.errors.username.includes('letters and numbers'));
     });
 
     test('should fail when username contains spaces', async () => {
@@ -178,7 +211,7 @@ describe('API Endpoints', () => {
         .expect('Content-Type', /json/);
 
       assert.strictEqual(response.body.success, false);
-      assert.ok(response.body.message.includes('letters and numbers'));
+      assert.ok(response.body.errors.username.includes('letters and numbers'));
     });
 
     test('should fail when username contains unicode characters', async () => {
@@ -195,7 +228,7 @@ describe('API Endpoints', () => {
         .expect('Content-Type', /json/);
 
       assert.strictEqual(response.body.success, false);
-      assert.ok(response.body.message.includes('letters and numbers'));
+      assert.ok(response.body.errors.username.includes('letters and numbers'));
     });
 
     test('should fail when password is too short', async () => {
@@ -206,13 +239,13 @@ describe('API Endpoints', () => {
         .post('/api/register')
         .send({
           username: 'validuser',
-          password: '12345',
+          password: '123456789',
         })
         .expect(400)
         .expect('Content-Type', /json/);
 
       assert.strictEqual(response.body.success, false);
-      assert.ok(response.body.message.includes('at least 6 characters'));
+      assert.ok(response.body.errors.password.includes('at least 10 characters'));
     });
 
     test('should fail when username is missing', async () => {
@@ -228,7 +261,7 @@ describe('API Endpoints', () => {
         .expect('Content-Type', /json/);
 
       assert.strictEqual(response.body.success, false);
-      assert.ok(response.body.message.includes('required'));
+      assert.ok(response.body.errors.username.includes('required'));
     });
 
     test('should fail when password is missing', async () => {
@@ -244,7 +277,7 @@ describe('API Endpoints', () => {
         .expect('Content-Type', /json/);
 
       assert.strictEqual(response.body.success, false);
-      assert.ok(response.body.message.includes('required'));
+      assert.ok(response.body.errors.password.includes('required'));
     });
   });
 
@@ -313,17 +346,19 @@ describe('API Endpoints', () => {
       const db = new MockDatabase();
       const app = createApp(db);
 
+      // Login doesn't validate username format, it just tries to authenticate
+      // and returns 401 if the user doesn't exist
       const response = await request(app)
         .post('/api/login')
         .send({
           username: 'user@name',
           password: 'password123',
         })
-        .expect(400)
+        .expect(401)
         .expect('Content-Type', /json/);
 
       assert.strictEqual(response.body.success, false);
-      assert.ok(response.body.message.includes('letters and numbers'));
+      assert.strictEqual(response.body.message, 'Invalid username or password');
     });
 
     test('should fail when password is missing', async () => {
@@ -339,7 +374,7 @@ describe('API Endpoints', () => {
         .expect('Content-Type', /json/);
 
       assert.strictEqual(response.body.success, false);
-      assert.ok(response.body.message.includes('required'));
+      assert.ok(response.body.errors.password.includes('required'));
     });
 
     test('should login with case-insensitive username but preserve original casing', async () => {
@@ -397,7 +432,7 @@ describe('API Endpoints', () => {
 
       const response = await request(app)
         .get('/api/puzzle')
-        .query({ date: '2025-10-27' }) // Use a specific date that exists in puzzles
+        .query({ date: '02-19-2026' }) // Use a specific date that exists in puzzles
         .expect(200)
         .expect('Content-Type', /json/);
 
@@ -419,7 +454,7 @@ describe('API Endpoints', () => {
 
       const response = await request(app)
         .get('/api/puzzle')
-        .query({ date: '2025-10-27' })
+        .query({ date: '02-19-2026' })
         .set('Authorization', `Bearer ${token}`)
         .expect(200)
         .expect('Content-Type', /json/);
@@ -446,7 +481,7 @@ describe('API Endpoints', () => {
 
       const response = await request(app)
         .get('/api/puzzle')
-        .query({ date: '2025-10-27' })
+        .query({ date: '02-19-2026' })
         .set('Authorization', `Bearer ${expiredToken}`)
         .expect(200)
         .expect('Content-Type', /json/);
@@ -467,7 +502,7 @@ describe('API Endpoints', () => {
 
       const response = await request(app)
         .get('/api/puzzle')
-        .query({ date: '2025-10-27' })
+        .query({ date: '02-19-2026' })
         .set('Authorization', 'Bearer invalid-token-here')
         .expect(200)
         .expect('Content-Type', /json/);
@@ -485,7 +520,7 @@ describe('API Endpoints', () => {
     test('should accept optional date parameter', async () => {
       const db = new MockDatabase();
       const app = createApp(db);
-      const requestedDate = '2025-10-28';
+      const requestedDate = '02-19-2026';
 
       const response = await request(app)
         .get('/api/puzzle')
@@ -505,7 +540,7 @@ describe('API Endpoints', () => {
 
       const response = await request(app)
         .get('/api/puzzle')
-        .query({ date: '2020-01-01' }) // Date with no puzzle
+        .query({ date: '01-01-2020' }) // Date with no puzzle
         .expect(404)
         .expect('Content-Type', /json/);
 
@@ -531,6 +566,7 @@ describe('API Endpoints', () => {
   describe('POST /api/submit', () => {
     test('should successfully submit result with valid JWT token', async () => {
       const db = new MockDatabase();
+      await db.createUser('user123', 'password123');
       const app = createApp(db);
       const username = 'user123';
       const token = generateAuthToken(username);
@@ -539,23 +575,22 @@ describe('API Endpoints', () => {
         .post('/api/submit')
         .set('Authorization', `Bearer ${token}`)
         .send({
-          puzzleId: 'puzzle_2025_01_15',
-          score: 75,
-          words: ['BAD', 'DAD', 'ADD'],
+          puzzleId: 'puzzle_01_15_2025',
+          guesses: ['A', 'B', 'C'],
+          won: true,
         })
         .expect(200)
         .expect('Content-Type', /json/);
 
       assert.strictEqual(response.body.success, true);
-      assert.ok(response.body.message);
-      assert.ok(typeof response.body.ranking === 'number');
-      assert.ok(response.body.ranking > 0);
+      assert.strictEqual(typeof response.body.streak, 'number');
+      assert.strictEqual(response.body.streak, 1);
 
       // Verify result was stored in database
-      const result = await db.getPuzzleResult(username, '2025-01-15');
+      const result = await db.getPuzzleResult(username, '01-15-2025');
       assert.ok(result);
-      assert.strictEqual(result.score, 75);
-      assert.deepStrictEqual(result.words, ['BAD', 'DAD', 'ADD']);
+      assert.deepStrictEqual(result.guesses, ['A', 'B', 'C']);
+      assert.strictEqual(result.won, true);
     });
 
     test('should fail when JWT token is missing', async () => {
@@ -565,9 +600,9 @@ describe('API Endpoints', () => {
       const response = await request(app)
         .post('/api/submit')
         .send({
-          puzzleId: 'puzzle_2025_01_15',
-          score: 75,
-          words: ['BAD', 'DAD'],
+          puzzleId: 'puzzle_01_15_2025',
+          guesses: ['A', 'B'],
+          won: false,
         })
         .expect(401)
         .expect('Content-Type', /json/);

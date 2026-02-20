@@ -178,6 +178,7 @@ declare global {
       username: string;
     }
     interface Request {
+      user?: User;
       tokenStatus?: TokenStatus;
     }
   }

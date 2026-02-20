@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
-import { Flame, Trophy, Cake, BookHeart, Gamepad, Gamepad2 } from "lucide-react";
+import { Flame, Trophy, Cake } from "lucide-react";
 import { API, Auth } from "@/lib/api-client";
 import { getTodayInPacificTime } from "../../../server/time-utils";
 import type { Stats } from "@shared/lib/schema";
@@ -35,7 +35,6 @@ function StatCard({ title, icon, children }: StatCardProps) {
 // Format date from MM-DD-YYYY to "Jan 1st, 2025"
 function formatDate(dateStr: string): string {
   const [month, day, year] = dateStr.split("-").map(Number);
-  const date = new Date(year, month - 1, day);
 
   const monthNames = [
     "Jan",

@@ -3,7 +3,6 @@
  * These are pure functions with no side effects
  */
 
-import type { Puzzle } from "@shared/lib/puzzles";
 
 /**
  * Derive which cells are revealed based on guessed letters and puzzle grid
