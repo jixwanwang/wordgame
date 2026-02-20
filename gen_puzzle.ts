@@ -327,4 +327,4 @@ export default PUZZLES;
   console.log(`\nSuccessfully generated ${numPuzzles} puzzles and wrote to ${filePath}`);
 }
 
-generatePuzzlesForDateRange("02-14-2026", "normal", 60);
+generatePuzzlesForDateRange("02-20-2026", "normal", 60);
