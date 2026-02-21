@@ -7,8 +7,9 @@ import { DebugHistoryModal } from "@/components/debug-history-modal";
 import { GameOverStats } from "@/components/game-over-stats";
 import { AuthModal } from "@/components/auth-modal";
 import { StatsModal } from "@/components/stats-modal";
+import { HistoryModal } from "@/components/history-modal";
 import { SquareInput } from "@/components/square-input";
-import { CircleUserRound, UserRound, ChartColumnBig, LogOut } from "lucide-react";
+import { CircleUserRound, UserRound, ChartColumnBig, LogOut, Calendar } from "lucide-react";
 import { getGameNumber, NUM_GUESSES, calculateRevealedLetterCount } from "@shared/lib/game-utils";
 import {
   DropdownMenu,
@@ -88,6 +89,7 @@ export default function Game({ difficulty }: GameProps) {
   const [showDebugHistory, setShowDebugHistory] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
@@ -307,6 +309,10 @@ export default function Game({ difficulty }: GameProps) {
                     <ChartColumnBig className="w-4 h-4 mr-2" />
                     Stats
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowHistoryModal(true)}>
+                    <Calendar className="w-4 h-4 mr-2" />
+                    History
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {
                       dispatch(handleLogout());
@@ -345,6 +351,9 @@ export default function Game({ difficulty }: GameProps) {
 
       {/* Stats Modal */}
       <StatsModal open={showStatsModal} onOpenChange={setShowStatsModal} />
+
+      {/* History Modal */}
+      <HistoryModal open={showHistoryModal} onOpenChange={setShowHistoryModal} />
 
       <main className="container mx-auto px-2 sm:px-4 pb-4 max-w-2xl">
         <div className="relative">
