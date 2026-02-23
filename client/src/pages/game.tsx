@@ -3,7 +3,6 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { CrosswordGrid } from "@/components/crossword-grid";
 import { GameStats } from "@/components/game-stats";
 import { GameKeyboard } from "@/components/game-keyboard";
-import { DebugHistoryModal } from "@/components/debug-history-modal";
 import { GameOverStats } from "@/components/game-over-stats";
 import { AuthModal } from "@/components/auth-modal";
 import { StatsModal } from "@/components/stats-modal";
@@ -97,7 +96,6 @@ export default function Game({ difficulty }: GameProps) {
   const [inputValue, setInputValue] = useState("");
   const [activeTab, setActiveTab] = useState<"results" | "guesses">("results");
   const [showGuessesModal, setShowGuessesModal] = useState(false);
-  const [showDebugHistory, setShowDebugHistory] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -356,9 +354,6 @@ export default function Game({ difficulty }: GameProps) {
           dispatch(handleLoginSuccess());
         }}
       />
-
-      {/* Debug History Modal */}
-      <DebugHistoryModal open={showDebugHistory} onOpenChange={setShowDebugHistory} />
 
       {/* Stats Modal */}
       <StatsModal open={showStatsModal} onOpenChange={setShowStatsModal} />

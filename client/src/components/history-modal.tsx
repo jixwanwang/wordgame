@@ -396,6 +396,7 @@ export function HistoryModalInner({ open, onOpenChange }: HistoryModalProps) {
                   </Button>
                 ) : (
                   <Button
+                    className="opacity-0"
                     variant="outline"
                     onClick={() => {
                       // TODO: Implement navigation to play this puzzle
