@@ -3,28 +3,17 @@ import useEmblaCarousel from "embla-carousel-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CrosswordGrid } from "@/components/crossword-grid";
-import { ChevronLeft, ChevronRight, Check } from "lucide-react";
-import { API } from "@/lib/api-client";
+import { ChevronLeft, ChevronRight, Check, X } from "lucide-react";
+import { calculateRevealedLetterCount, NUM_GUESSES } from "@shared/lib/game-utils";
 import { Grid8x8 } from "@shared/lib/grid";
-import { Puzzle } from "@shared/lib/puzzles";
-import type { SavedGameState } from "@shared/lib/schema";
 import { getTodayInPacificTime } from "../../../server/time-utils";
 import { cn } from "@/lib/utils";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchHistoryEntryThunk } from "@/store/thunks/historyThunks";
 
 interface HistoryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-interface PuzzleData {
-  puzzle: Puzzle;
-  savedState?: SavedGameState;
-}
-
-interface DateStatus {
-  isComplete: boolean;
-  wonGame: boolean;
-  score: { revealed: number; total: number } | null;
 }
 
 // Parse MM-DD-YYYY to Date object
@@ -92,33 +81,6 @@ function isAfterApiDate(a: string, b: string): boolean {
   return parseApiDate(a).getTime() > parseApiDate(b).getTime();
 }
 
-// Calculate score: revealed letters / total letters in puzzle
-function calculateScore(
-  puzzle: Puzzle,
-  guessedLetters: string[],
-): { revealed: number; total: number } {
-  const grid = new Grid8x8();
-  grid.loadPuzzle(puzzle);
-
-  const guessedSet = new Set(guessedLetters.map((l) => l.toUpperCase()));
-  let revealed = 0;
-  let total = 0;
-
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      const letter = grid.getCell(row, col);
-      if (letter && letter !== " ") {
-        total++;
-        if (guessedSet.has(letter.toUpperCase())) {
-          revealed++;
-        }
-      }
-    }
-  }
-
-  return { revealed, total };
-}
-
 export function HistoryModal({ open, onOpenChange }: HistoryModalProps) {
   if (!open) {
     return null;
@@ -128,12 +90,11 @@ export function HistoryModal({ open, onOpenChange }: HistoryModalProps) {
 
 export function HistoryModalInner({ open, onOpenChange }: HistoryModalProps) {
   const today = getTodayInPacificTime();
+  const dispatch = useAppDispatch();
+  const historyEntries = useAppSelector((state) => state.history.entries);
+  const loadingByDate = useAppSelector((state) => state.history.loadingByDate);
+  const errorByDate = useAppSelector((state) => state.history.errorByDate);
   const [selectedDate, setSelectedDate] = useState(today);
-  const [puzzleData, setPuzzleData] = useState<PuzzleData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [adjacentStatus, setAdjacentStatus] = useState<Record<string, DateStatus>>({});
-  const fetchedDatesRef = useRef<Set<string>>(new Set());
   const contentRef = useRef<HTMLDivElement>(null);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -158,6 +119,12 @@ export function HistoryModalInner({ open, onOpenChange }: HistoryModalProps) {
 
   const isToday = selectedDate === today;
   const canGoNext = !isToday;
+  const currentEntry = historyEntries[selectedDate];
+  const puzzleData = currentEntry?.puzzle
+    ? { puzzle: currentEntry.puzzle, savedState: currentEntry.savedState }
+    : null;
+  const loading = loadingByDate[selectedDate] ?? false;
+  const error = errorByDate[selectedDate] ?? null;
 
   // Compute grid from puzzle data
   const grid = useMemo(() => {
@@ -186,121 +153,49 @@ export function HistoryModalInner({ open, onOpenChange }: HistoryModalProps) {
   // Fetch puzzle when date changes or modal opens
   useEffect(() => {
     if (open && selectedDate) {
-      fetchPuzzle(selectedDate);
+      dispatch(fetchHistoryEntryThunk({ date: selectedDate, includePuzzle: true }));
     }
-  }, [open, selectedDate]);
+  }, [open, selectedDate, dispatch]);
 
-  // Reset to today when modal opens
-  useEffect(() => {
-    if (open) {
-      setSelectedDate(today);
-    }
-  }, [open, today]);
-
-  const fetchPuzzle = async (apiDate: string) => {
-    setLoading(true);
-    setError(null);
-    setPuzzleData(null);
-
-    try {
-      const response = await API.getPuzzle(apiDate);
-      if (response.id) {
-        setPuzzleData({
-          puzzle: {
-            date: response.date,
-            words: response.words,
-            grid: response.grid,
-            wordPositions: response.wordPositions,
-          },
-          savedState: response.savedState,
-        });
-      } else {
-        setError("No puzzle available for this date");
-      }
-    } catch (err) {
-      console.error("Failed to fetch puzzle:", err);
-      setError("Failed to load puzzle");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch status for a single date (for adjacent dates)
-  const fetchDateStatus = async (apiDate: string): Promise<DateStatus | null> => {
-    try {
-      const response = await API.getPuzzle(apiDate);
-      if (response.id) {
-        const puzzle: Puzzle = {
-          date: response.date,
-          words: response.words,
-          grid: response.grid,
-          wordPositions: response.wordPositions,
-        };
-        const savedState = response.savedState;
-        const isComplete = savedState?.isComplete === true;
-        const wonGame = savedState?.wonGame === true;
-        const score = savedState?.guessedLetters
-          ? calculateScore(puzzle, savedState.guessedLetters)
-          : null;
-        return { isComplete, wonGame, score };
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  };
-
-  // Fetch adjacent dates' status
+  // Fetch adjacent dates' status (without puzzle data)
   useEffect(() => {
     if (!open) return;
+    dateList.forEach((date) => {
+      if (isAfterApiDate(date, today)) return;
+      dispatch(fetchHistoryEntryThunk({ date, includePuzzle: false }));
+    });
+  }, [open, dateList, today, dispatch]);
 
-    const fetchAdjacentStatuses = async () => {
-      const newStatus: Record<string, DateStatus> = {};
-      await Promise.all(
-        dateList.map(async (date) => {
-          // Skip future dates or already fetched
-          if (isAfterApiDate(date, today)) return;
-          if (fetchedDatesRef.current.has(date)) return;
-          fetchedDatesRef.current.add(date);
-          const status = await fetchDateStatus(date);
-          if (status !== null) {
-            newStatus[date] = status;
-          }
-        }),
-      );
-
-      if (Object.keys(newStatus).length > 0) {
-        setAdjacentStatus((prev) => ({ ...prev, ...newStatus }));
-      }
-    };
-
-    fetchAdjacentStatuses();
-  }, [open, dateList, today]);
-
-  // Reset fetched dates when modal closes
-  useEffect(() => {
-    if (!open) {
-      fetchedDatesRef.current.clear();
-      setAdjacentStatus({});
-    }
-  }, [open]);
-
-  const hasCompleted = puzzleData?.savedState?.isComplete === true;
-  const wonGame = puzzleData?.savedState?.wonGame === true;
-  const showTodayPlaceholder = isToday && !hasCompleted;
+  const hasCompleted = currentEntry?.status?.isComplete === true;
+  const wonGame = currentEntry?.status?.wonGame === true;
+  const hasPlayed = (puzzleData?.savedState?.guessedLetters?.length ?? 0) > 0;
   const gameStatus = hasCompleted ? (wonGame ? "won" : "lost") : "playing";
 
-  // Calculate score for display
-  const score = useMemo(() => {
-    if (!puzzleData?.puzzle || !puzzleData?.savedState?.guessedLetters) return null;
-    return calculateScore(puzzleData.puzzle, puzzleData.savedState.guessedLetters);
+  const lettersRevealed = useMemo(() => {
+    if (!puzzleData?.puzzle || !puzzleData?.savedState?.guessedLetters) return 0;
+    return calculateRevealedLetterCount(
+      puzzleData.puzzle.words,
+      puzzleData.savedState.guessedLetters,
+    );
   }, [puzzleData]);
 
+  const totalWordLetters = useMemo(() => {
+    if (!puzzleData?.puzzle) return 0;
+    return puzzleData.puzzle.words.reduce((sum, w) => sum + w.length, 0);
+  }, [puzzleData?.puzzle]);
+
+  const guessesUsed = useMemo(() => {
+    if (!puzzleData?.savedState) return 0;
+    return NUM_GUESSES - (puzzleData.savedState.guessesRemaining ?? NUM_GUESSES);
+  }, [puzzleData]);
+
+  // load more days
   useEffect(() => {
-    const x = () => {
+    const maybeFetchDays = () => {
       const currentIndex = dateList.indexOf(selectedDate);
-      if (currentIndex <= 2) {
+      if (currentIndex <= 3) {
         setDateList((prev) => [
+          getAdjacentDate(prev[0], -7),
           getAdjacentDate(prev[0], -6),
           getAdjacentDate(prev[0], -5),
           getAdjacentDate(prev[0], -4),
@@ -309,12 +204,15 @@ export function HistoryModalInner({ open, onOpenChange }: HistoryModalProps) {
           getAdjacentDate(prev[0], -1),
           ...prev,
         ]);
+        requestAnimationFrame(() => {
+          emblaApi?.goTo(emblaApi.internalEngine().indexCurrent.get() + 7, true);
+        });
       }
     };
     if (emblaApi) {
-      emblaApi.on("settle", x);
+      emblaApi.on("settle", maybeFetchDays);
       return () => {
-        emblaApi.off("settle", x);
+        emblaApi.off("settle", maybeFetchDays);
       };
     }
   }, [emblaApi, selectedDate, dateList]);
@@ -342,7 +240,6 @@ export function HistoryModalInner({ open, onOpenChange }: HistoryModalProps) {
 
   const goPrev = () => {
     const currentIndex = dateList.indexOf(selectedDate);
-    // TODO: add more dates to the beginning, do it in an effect rather than on demand here
     if (currentIndex === 0) {
       return;
     } else {
@@ -351,19 +248,11 @@ export function HistoryModalInner({ open, onOpenChange }: HistoryModalProps) {
     }
   };
 
-  // fixing effect
-  useEffect(() => {
-    const currentIndex = dateList.indexOf(selectedDate);
-    if (emblaApi) {
-      emblaApi.goTo(currentIndex, false);
-    }
-  }, [dateList, selectedDate, emblaApi]);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] sm:max-w-xl bg-white p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">History</DialogTitle>
+          <DialogTitle className="text-xl font-bold">Your Game History</DialogTitle>
         </DialogHeader>
 
         {/* Date selector - embla carousel */}
@@ -376,14 +265,14 @@ export function HistoryModalInner({ open, onOpenChange }: HistoryModalProps) {
             <ChevronLeft className="w-5 h-5 text-gray-400" />
           </button>
 
-          <div ref={emblaRef} className="overflow-hidden w-[210px] sm:w-[240px]">
+          <div ref={emblaRef} className="overflow-hidden w-[220px] sm:w-[300px]">
             <div className="flex touch-pan-y select-none">
               {dateList.map((date) => {
                 const isCurrent = selectedDate === date; // Center is always current
                 const isFuture = isAfterApiDate(date, today);
-                const status = adjacentStatus[date];
+                const status = historyEntries[date]?.status;
                 return (
-                  <div key={date} className="flex-[0_0_60px] sm:flex-[0_0_70px] px-1 mx-2">
+                  <div key={date} className="flex-[0_0_80px]">
                     <button
                       onClick={() => !isFuture && !isCurrent && selectDate(date)}
                       disabled={isFuture || isCurrent}
@@ -395,43 +284,40 @@ export function HistoryModalInner({ open, onOpenChange }: HistoryModalProps) {
                       )}
                     >
                       {isFuture ? (
-                        <div className="h-6" />
+                        <div className="h-5" />
                       ) : (
-                        <>
-                          <div
-                            className={cn(
-                              "text-sm",
-                              isCurrent ? "font-semibold text-gray-900" : "text-gray-500",
-                            )}
-                          >
-                            {date === today ? "Today" : formatShortDate(date)}
-                          </div>
-                          <div className="text-[8px] text-gray-400 h-3 flex items-center justify-center gap-0.5">
-                            {isCurrent ? (
-                              loading ? null : hasCompleted ? (
-                                <>
-                                  <span>
-                                    {score?.revealed}/{score?.total}
-                                  </span>
-                                  {wonGame && <Check className="w-2 h-2 text-green-500" />}
-                                </>
-                              ) : puzzleData ? (
-                                <span className="text-gray-400">Not Played</span>
-                              ) : null
-                            ) : status ? (
-                              status.isComplete ? (
-                                <>
-                                  <span>
-                                    {status.score?.revealed}/{status.score?.total}
-                                  </span>
-                                  {status.wonGame && <Check className="w-2 h-2 text-green-500" />}
-                                </>
+                        (() => {
+                          const icon = isCurrent ? (
+                            !loading && hasCompleted ? (
+                              wonGame ? (
+                                <Check className="w-3 h-3 text-green-500" />
                               ) : (
-                                <span>Not Played</span>
+                                <X className="w-3 h-3 text-red-500" />
                               )
-                            ) : null}
-                          </div>
-                        </>
+                            ) : null
+                          ) : status?.isComplete ? (
+                            status.wonGame ? (
+                              <Check className="w-3 h-3 text-green-500" />
+                            ) : (
+                              <X className="w-3 h-3 text-red-500" />
+                            )
+                          ) : null;
+                          return (
+                            <div className="h-5 flex items-center justify-center gap-1">
+                              <span
+                                className={cn(
+                                  "text-sm whitespace-nowrap",
+                                  isCurrent ? "font-semibold text-gray-900" : "text-gray-500",
+                                )}
+                              >
+                                {date === today ? "Today" : formatShortDate(date)}
+                              </span>
+                              <span className="w-3 h-3 flex-shrink-0 flex items-center justify-center">
+                                {icon}
+                              </span>
+                            </div>
+                          );
+                        })()
                       )}
                     </button>
                   </div>
@@ -454,10 +340,10 @@ export function HistoryModalInner({ open, onOpenChange }: HistoryModalProps) {
         </div>
 
         {/* Content - fixed height to prevent modal jumping */}
-        <div ref={contentRef} className="mt-1 sm:mt-2 h-[280px] sm:h-[420px]">
+        <div ref={contentRef} className="mt-1 sm:mt-2 h-[320px] sm:h-[420px]">
           {loading && (
             <div className="space-y-3">
-              <div className="min-h-[220px] sm:min-h-[360px] flex items-center justify-center">
+              <div className="min-h-[260px] sm:min-h-[360px] flex items-center justify-center">
                 <div className="text-gray-500">Loading...</div>
               </div>
               <div className="text-center">
@@ -468,7 +354,7 @@ export function HistoryModalInner({ open, onOpenChange }: HistoryModalProps) {
 
           {error && (
             <div className="space-y-3">
-              <div className="min-h-[220px] sm:min-h-[360px] flex items-center justify-center">
+              <div className="min-h-[260px] sm:min-h-[360px] flex items-center justify-center">
                 <div className="text-gray-500">{error}</div>
               </div>
               <div className="text-center">
@@ -477,24 +363,10 @@ export function HistoryModalInner({ open, onOpenChange }: HistoryModalProps) {
             </div>
           )}
 
-          {showTodayPlaceholder && !loading && !error && (
-            <div className="space-y-3">
-              <div className="min-h-[220px] sm:min-h-[360px] flex flex-col items-center justify-center text-center">
-                <div className="text-gray-400 text-lg mb-2">🎯</div>
-                <div className="text-gray-500">You haven't completed today's puzzle yet</div>
-              </div>
-              <div className="text-center">
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
-                  Play Today's Puzzle
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {puzzleData && !loading && !error && !showTodayPlaceholder && (
+          {puzzleData && !loading && !error && (
             <div className="space-y-3">
               {/* Grid - fixed height container to prevent modal shifting */}
-              <div className="min-h-[220px] sm:min-h-[360px] flex items-center justify-center">
+              <div className="min-h-[260px] sm:min-h-[360px] flex items-center justify-center">
                 <CrosswordGrid
                   grid={grid}
                   isLetterRevealed={isLetterRevealed}
@@ -503,17 +375,25 @@ export function HistoryModalInner({ open, onOpenChange }: HistoryModalProps) {
                 />
               </div>
 
-              {/* Result or Play button */}
+              {/* Score or Play button */}
               <div className="text-center">
-                {hasCompleted ? (
-                  <div
-                    className={cn(
-                      "text-sm font-medium",
-                      wonGame ? "text-green-600" : "text-gray-600",
-                    )}
-                  >
-                    {wonGame ? "Completed ✓" : "Attempted"}
+                {hasPlayed ? (
+                  <div className="flex flex-col items-center gap-0.5">
+                    <div className="text-sm">
+                      <span className="font-bold">{lettersRevealed}</span>
+                      {" / "}
+                      {totalWordLetters} letters revealed
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-bold">{guessesUsed}</span>
+                      {" / "}
+                      {NUM_GUESSES} guesses used
+                    </div>
                   </div>
+                ) : isToday ? (
+                  <Button variant="outline" onClick={() => onOpenChange(false)}>
+                    Play Today's Puzzle
+                  </Button>
                 ) : (
                   <Button
                     variant="outline"
