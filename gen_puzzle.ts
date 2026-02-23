@@ -380,7 +380,6 @@ export function generateAndMigratePuzzles(numNewPuzzles: number): void {
 
     currentDate.setDate(currentDate.getDate() + 1);
   }
-  console.log("");
 
   // Combine current puzzles with new puzzles, with new puzzles overwriting existing ones
   const puzzlesByDate = new Map<string, Puzzle>();
@@ -414,6 +413,6 @@ export function generateAndMigratePuzzles(numNewPuzzles: number): void {
   );
 }
 
-// Run with 60 new puzzles by default
-const numPuzzles = process.argv[2] ? parseInt(process.argv[2], 10) : 60;
+// Run with 90 new puzzles by default
+const numPuzzles = process.argv[2] ? parseInt(process.argv[2], 10) : 90;
 generateAndMigratePuzzles(numPuzzles);
