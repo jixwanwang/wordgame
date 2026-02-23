@@ -491,6 +491,7 @@ export default function Game({ difficulty }: GameProps) {
         open={showGuessesModal}
         onOpenChange={setShowGuessesModal}
         guesses={gameState.guesses}
+        revealedLetters={revealedLetters}
       />
     </div>
   );
