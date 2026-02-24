@@ -19,11 +19,13 @@ Key state: the word list, grid layout, word positions, loading/error state, and 
 Populated by an async thunk that calls `GET /api/puzzle`.
 
 ### `historySlice`
-Holds the authenticated user's historical results fetched from the server.
+Holds per-date puzzle data and play results used by the history modal.
 
-Key state: array of past game results, loading state.
+Key state: `entries` — a `Record<string, HistoryEntry>` keyed by date, each with an optional `puzzle`, `savedState`, and `DateStatus` (isComplete, wonGame, score). Also tracks `loadingByDate` and `errorByDate`.
 
-Populated by an async thunk that calls `GET /api/history`.
+Entries are populated in two ways:
+- `fetchHistoryEntryThunk` — fetches puzzle and/or status for a date. Uses an in-memory cache: skips the network call if the entry already exists in the slice.
+- `makeGuessThunk` — when a game completes, immediately dispatches `setHistoryEntry` to write the fresh completion data, bypassing the cache so the history modal reflects the result without a re-fetch.
 
 ## Thunks
 
@@ -31,9 +33,9 @@ Async operations live in dedicated thunk files:
 
 | File | Operations |
 |---|---|
-| `gameThunks` | Submit game result, load local game state |
+| `gameThunks` | `fetchPuzzleThunk` — loads puzzle for today or a specific date (`date?: string` param); restores saved state. `makeGuessThunk` — processes a guess, persists to storage, submits to API on completion, and syncs `historySlice`. `submitResultThunk` — POSTs result to API. |
 | `authThunks` | Login, register, validate token, refresh token |
-| `historyThunks` | Fetch history from server |
+| `historyThunks` | `fetchHistoryEntryThunk` — fetches puzzle and/or status for a specific date; cached per date |
 
 ## Selectors
 
