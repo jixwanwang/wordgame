@@ -2,6 +2,10 @@
 
 The client uses two browser storage mechanisms and a custom API client.
 
+## Date Format
+
+Dates are represented as `MM-DD-YYYY` strings (e.g., `01-15-2025`) throughout localStorage, API requests, and URL parameters. The helper `getTodayInPacificTime()` (imported from `server/time-utils`) returns today's date in this format and is the canonical source for "today".
+
 ## localStorage
 
 **Key:** `wordgame-history`

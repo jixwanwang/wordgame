@@ -13,6 +13,7 @@ import {
   setPuzzleDate,
   resetGameToInitial,
 } from "../slices/gameSlice";
+import { setHistoryEntry } from "../slices/historySlice";
 import { selectRevealedCount } from "../selectors/gridSelectors";
 import { selectCurrentPuzzle, selectPuzzleGrid } from "../selectors/puzzleSelectors";
 import { getTotalLettersInGrid } from "@/lib/grid-helpers";
@@ -20,14 +21,17 @@ import { getTotalLettersInGrid } from "@/lib/grid-helpers";
 // Fetch puzzle from API and restore saved state if available
 export const fetchPuzzleThunk = createAsyncThunk(
   "game/fetchPuzzle",
-  async (params: { difficulty: "normal" | "hard" }, { dispatch, rejectWithValue }) => {
+  async (
+    params: { difficulty: "normal" | "hard"; date?: string },
+    { dispatch, rejectWithValue },
+  ) => {
     try {
       dispatch(setLoading(true));
 
-      const { difficulty } = params;
+      const { difficulty, date } = params;
 
       // Fetch puzzle from server
-      const response = await API.getPuzzle(undefined, difficulty);
+      const response = await API.getPuzzle(date, difficulty);
       const puzzle = {
         date: response.date,
         words: response.words,
@@ -175,6 +179,27 @@ export const makeGuessThunk = createAsyncThunk(
 
         // Always complete in local storage
         const localStreak = completeGame(puzzleState.date, wonGame);
+
+        // Sync completion into the history slice so the history modal reflects
+        // the updated state without needing to re-fetch from the server.
+        dispatch(
+          setHistoryEntry({
+            date: puzzleState.date,
+            savedState: {
+              date: puzzleState.date,
+              guessesRemaining: updatedState.totalGuessesRemaining,
+              guessedLetters: [...updatedState.guessedLetters],
+              guesses: [...updatedState.guesses],
+              isComplete: true,
+              wonGame,
+            },
+            status: {
+              isComplete: true,
+              wonGame,
+              score: { revealed: revealedCount, total: totalLetters },
+            },
+          }),
+        );
 
         // Submit result to API if user is authenticated
         if (Auth.isAuthenticated()) {

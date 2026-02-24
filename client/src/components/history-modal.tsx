@@ -14,6 +14,7 @@ import { fetchHistoryEntryThunk } from "@/store/thunks/historyThunks";
 interface HistoryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onPlayDate?: (date: string) => void;
 }
 
 // Parse MM-DD-YYYY to Date object
@@ -81,14 +82,14 @@ function isAfterApiDate(a: string, b: string): boolean {
   return parseApiDate(a).getTime() > parseApiDate(b).getTime();
 }
 
-export function HistoryModal({ open, onOpenChange }: HistoryModalProps) {
+export function HistoryModal({ open, onOpenChange, onPlayDate }: HistoryModalProps) {
   if (!open) {
     return null;
   }
-  return <HistoryModalInner open={open} onOpenChange={onOpenChange} />;
+  return <HistoryModalInner open={open} onOpenChange={onOpenChange} onPlayDate={onPlayDate} />;
 }
 
-export function HistoryModalInner({ open, onOpenChange }: HistoryModalProps) {
+export function HistoryModalInner({ open, onOpenChange, onPlayDate }: HistoryModalProps) {
   const today = getTodayInPacificTime();
   const dispatch = useAppDispatch();
   const historyEntries = useAppSelector((state) => state.history.entries);
@@ -396,14 +397,15 @@ export function HistoryModalInner({ open, onOpenChange }: HistoryModalProps) {
                   </Button>
                 ) : (
                   <Button
-                    className="opacity-0"
                     variant="outline"
                     onClick={() => {
-                      // TODO: Implement navigation to play this puzzle
-                      console.log("Play puzzle for date:", selectedDate);
+                      onOpenChange(false);
+                      if (onPlayDate != null) {
+                        onPlayDate(selectedDate);
+                      }
                     }}
                   >
-                    Play Crosses {formatDisplayDate(selectedDate)}
+                    Play {formatDisplayDate(selectedDate)}
                   </Button>
                 )}
               </div>
