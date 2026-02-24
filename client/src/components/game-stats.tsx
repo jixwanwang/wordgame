@@ -1,8 +1,10 @@
 import { GameState } from "@shared/schema";
 import { cn } from "@/lib/utils";
+import { Grid8x8 } from "@shared/lib/grid";
 
-interface GameStatsProps {
+export interface GameStatsProps {
   gameState: GameState;
+  grid?: Grid8x8;
 }
 
 export function GameStats({ gameState }: GameStatsProps) {

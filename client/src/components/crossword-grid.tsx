@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef, useState } from "react";
 import { Grid8x8 } from "@shared/lib/grid";
 import { Puzzle } from "@shared/lib/puzzles";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,44 @@ interface CrosswordGridProps {
   isLetterRevealed: (row: number, col: number) => boolean;
   currentPuzzle: Puzzle | undefined;
   gameStatus: "playing" | "won" | "lost";
+}
+
+interface FlipLetterProps {
+  letter: string;
+  shouldShowLetter: boolean;
+  animateKey: string;
+}
+
+function FlipLetter({ letter, shouldShowLetter, animateKey }: FlipLetterProps) {
+  const [flipped, setFlipped] = useState(false);
+  const lastKeyRef = useRef(animateKey);
+
+  useEffect(() => {
+    if (lastKeyRef.current !== animateKey) {
+      lastKeyRef.current = animateKey;
+      setFlipped(false);
+    }
+  }, [animateKey]);
+
+  useEffect(() => {
+    if (!shouldShowLetter) {
+      setFlipped(false);
+      return;
+    }
+    const raf = requestAnimationFrame(() => setFlipped(true));
+    return () => cancelAnimationFrame(raf);
+  }, [shouldShowLetter, animateKey]);
+
+  return (
+    <div className="crossword-flip-container">
+      <div className={cn("crossword-flip", flipped && "is-flipped")}>
+        <div className="crossword-flip-face crossword-flip-front">
+          {shouldShowLetter ? letter.toUpperCase() : ""}
+        </div>
+        <div className="crossword-flip-face crossword-flip-back" />
+      </div>
+    </div>
+  );
 }
 
 export function CrosswordGrid({
@@ -165,7 +203,7 @@ export function CrosswordGrid({
   }, [currentPuzzle?.date]); // Re-compute when puzzle changes
 
   const renderCell = (row: number, col: number) => {
-    const key = `${row}-${col}`;
+    const key = `${currentPuzzle?.date ?? "puzzle"}-${row}-${col}`;
     const letter = grid.getCell(row, col);
 
     // If cell is empty or just spaces, make it invisible but maintain grid structure
@@ -268,18 +306,21 @@ export function CrosswordGrid({
           "w-8 h-8 sm:w-10 sm:h-10 border-2 flex items-center justify-center text-sm sm:text-lg font-bold crossword-cell relative group",
           shouldShowLetter
             ? isAutoRevealed
-              ? "border-gray-400 text-orange-700"
-              : "border-gray-400 text-dark"
-            : "border-empty text-transparent",
+              ? "text-orange-700"
+              : "text-dark"
+            : "text-transparent",
         )}
         style={cellStyle}
         data-testid={`grid-cell-${row}-${col}`}
         data-letter={letter}
         data-revealed={cellRevealed}
+        data-show={shouldShowLetter}
       >
-        <span className="transition-opacity duration-200 group-hover:opacity-10">
-          {shouldShowLetter ? letter.toUpperCase() : ""}
-        </span>
+        <FlipLetter
+          letter={letter}
+          shouldShowLetter={shouldShowLetter}
+          animateKey={key}
+        />
         {renderArrows()}
       </div>
     );

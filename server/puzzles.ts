@@ -1,5 +1,6 @@
 import PUZZLES_NORMAL from "../lib/puzzles_normal.js";
 import PUZZLES_HARD from "../lib/puzzles_hard.js";
+import PUZZLES_HISTORICAL from "../lib/puzzles_normal_historical.js";
 import type { Puzzle, Difficulty } from "../lib/puzzles_types.js";
 import { getTodayInPacificTime } from "./time-utils.js";
 
@@ -14,6 +15,18 @@ function getPuzzleSet(difficulty: Difficulty) {
 }
 
 /**
+ * Compare two date strings in MM-DD-YYYY format
+ * @returns negative if date1 < date2, positive if date1 > date2, 0 if equal
+ */
+function compareDates(date1: string, date2: string): number {
+  const [m1, d1, y1] = date1.split("-").map(Number);
+  const [m2, d2, y2] = date2.split("-").map(Number);
+  if (y1 !== y2) return y1 - y2;
+  if (m1 !== m2) return m1 - m2;
+  return d1 - d2;
+}
+
+/**
  * Get a puzzle by date
  * @param date Date string in format MM-DD-YYYY
  * @param difficulty Puzzle difficulty (normal or hard)
@@ -25,7 +38,23 @@ export function getPuzzleByDate(date: string, difficulty: Difficulty = "normal")
 
   const puzzles = getPuzzleSet(difficulty);
   const puzzle = puzzles.find((p) => p.date === puzzleDate);
-  return puzzle || null;
+
+  if (puzzle !== undefined) {
+    return puzzle;
+  }
+
+  // If not found and date is before today, check historical puzzles (normal difficulty only)
+  if (difficulty === "normal") {
+    const today = getTodayInPacificTime();
+    if (compareDates(puzzleDate, today) < 0) {
+      const historicalPuzzle = PUZZLES_HISTORICAL.find((p) => p.date === puzzleDate);
+      if (historicalPuzzle !== undefined) {
+        return historicalPuzzle;
+      }
+    }
+  }
+
+  return null;
 }
 
 /**

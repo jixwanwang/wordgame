@@ -66,6 +66,8 @@
   --absent: hsl(220 3% 48%);
   --empty: hsl(218 11% 83%);
   --dark: hsl(217 91% 7%);
+  --flip-duration: 400ms;
+  --flip-ease: cubic-bezier(0.45, 0, 0.9, 1);
 }
 
 .dark {
@@ -204,10 +206,51 @@
 .crossword-cell {
   background-color: var(--cell-bg) !important;
   background-image: var(--cell-bg-image) !important;
+  border-color: transparent;
+  transition: border-color var(--flip-duration) var(--flip-ease);
+}
+
+.crossword-cell[data-show="true"] {
+  border-color: #9ca3af;
 }
 
 /* Prevent iOS from rendering arrows as emojis */
 .crossword-cell span {
   font-variant-emoji: text;
   -webkit-font-variant-emoji: text;
+}
+
+/* Crossword flip animation */
+.crossword-flip-container {
+  width: 100%;
+  height: 100%;
+  perspective: 800px;
+}
+
+.crossword-flip {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transform-origin: left center;
+  transform: translateX(-10%) rotateY(-90deg);
+  transition: transform var(--flip-duration) var(--flip-ease);
+}
+
+.crossword-flip.is-flipped {
+  transform: translateX(0) rotateY(0deg);
+}
+
+.crossword-flip-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.crossword-flip-back {
+  transform: rotateY(180deg);
 }

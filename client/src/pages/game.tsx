@@ -3,12 +3,12 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { CrosswordGrid } from "@/components/crossword-grid";
 import { GameStats } from "@/components/game-stats";
 import { GameKeyboard } from "@/components/game-keyboard";
-import { DebugHistoryModal } from "@/components/debug-history-modal";
 import { GameOverStats } from "@/components/game-over-stats";
 import { AuthModal } from "@/components/auth-modal";
 import { StatsModal } from "@/components/stats-modal";
+import { HistoryModal } from "@/components/history-modal";
 import { SquareInput } from "@/components/square-input";
-import { CircleUserRound, UserRound, ChartColumnBig, LogOut } from "lucide-react";
+import { CircleUserRound, UserRound, ChartColumnBig, LogOut, Calendar } from "lucide-react";
 import { getGameNumber, NUM_GUESSES, calculateRevealedLetterCount } from "@shared/lib/game-utils";
 import {
   DropdownMenu,
@@ -37,6 +37,8 @@ import {
   selectRevealedCount,
 } from "@/store/selectors/gridSelectors";
 import { setDifficulty } from "@/store/slices/gameSlice";
+import { cn } from "@/lib/utils";
+import { GuessesModal } from "@/components/guesses-modal";
 
 // separate the storage layer with a proper api for actions rather than whole state updates
 // use the error popup for tutorial. start with guess a letter (and give a suggestion that will guarantee multiple)
@@ -84,10 +86,19 @@ export default function Game({ difficulty }: GameProps) {
     dispatch(fetchPuzzleThunk({ difficulty }));
   }, [difficulty, dispatch]);
 
+  // Reset to results tab when game ends
+  useEffect(() => {
+    if (gameStatus !== "playing") {
+      setActiveTab("results");
+    }
+  }, [gameStatus]);
+
   const [inputValue, setInputValue] = useState("");
-  const [showDebugHistory, setShowDebugHistory] = useState(false);
+  const [activeTab, setActiveTab] = useState<"results" | "guesses">("results");
+  const [showGuessesModal, setShowGuessesModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
@@ -307,6 +318,10 @@ export default function Game({ difficulty }: GameProps) {
                     <ChartColumnBig className="w-4 h-4 mr-2" />
                     Stats
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowHistoryModal(true)}>
+                    <Calendar className="w-4 h-4 mr-2" />
+                    History
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {
                       dispatch(handleLogout());
@@ -340,11 +355,11 @@ export default function Game({ difficulty }: GameProps) {
         }}
       />
 
-      {/* Debug History Modal */}
-      <DebugHistoryModal open={showDebugHistory} onOpenChange={setShowDebugHistory} />
-
       {/* Stats Modal */}
       <StatsModal open={showStatsModal} onOpenChange={setShowStatsModal} />
+
+      {/* History Modal */}
+      <HistoryModal open={showHistoryModal} onOpenChange={setShowHistoryModal} />
 
       <main className="container mx-auto px-2 sm:px-4 pb-4 max-w-2xl">
         <div className="relative">
@@ -358,7 +373,7 @@ export default function Game({ difficulty }: GameProps) {
 
         <div className="flex justify-center">
           <div className="inline-flex flex-col">
-            {/* Input Section, only visible when playing */}
+            {/* Input Section (playing) or Tab Selector (game over) */}
             {gameState.gameStatus === "playing" ? (
               <div className="relative w-full mb-3 flex flex-col gap-3">
                 {/* Square input - centered */}
@@ -391,17 +406,40 @@ export default function Game({ difficulty }: GameProps) {
                   </div>
                 )}
               </div>
-            ) : null}
+            ) : (
+              <div className="w-full mb-3 flex justify-center">
+                <div className="flex border-b border-gray-200">
+                  {(["results", "guesses"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={cn(
+                        "relative px-8 sm:px-12 py-1.5 text-sm sm:text-base font-medium transition-colors pb-2",
+                        activeTab === tab ? "text-gray-900" : "text-gray-500 hover:text-gray-900",
+                      )}
+                    >
+                      {tab === "results" ? "Results" : "Guesses"}
+                      <span
+                        className={cn(
+                          "absolute bottom-0 left-0 w-full h-0.5 transition-colors",
+                          activeTab === tab ? "bg-gray-900" : "bg-transparent",
+                        )}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-            {/* On-screen Keyboard or Game Over Stats */}
+            {/* Keyboard (playing), Results tab, or Guesses tab */}
             {gameStatus === "playing" ? (
               <GameKeyboard
                 onLetterClick={handleLetterClick}
                 onBackspaceClick={handleBackspaceClick}
                 getLetterState={getKeyboardLetterState}
               />
-            ) : (
-              <div className="mb-2 flex flex-col items-center gap-4">
+            ) : activeTab === "results" ? (
+              <div className="mb-2 flex flex-col items-center gap-2">
                 <GameStats gameState={gameState} grid={grid} />
                 <GameOverStats
                   won={gameStatus === "won"}
@@ -414,6 +452,27 @@ export default function Game({ difficulty }: GameProps) {
                   currentStreak={currentStreak}
                 />
               </div>
+            ) : (
+              <div className="mb-2 flex flex-col items-center gap-3 w-full">
+                <div className="flex items-center justify-between w-full pl-1">
+                  <div className="text-md text-gray-600">
+                    <span className="font-bold">{NUM_GUESSES - totalGuessesRemaining}</span>
+                    {" / "}
+                    {NUM_GUESSES} guesses used
+                  </div>
+                  <button
+                    onClick={() => setShowGuessesModal(true)}
+                    className="px-2 py-1 bg-gray-200 hover:bg-gray-300 border-2 border-gray-300 rounded-sm text-sm font-bold text-dark transition-colors"
+                  >
+                    VIEW
+                  </button>
+                </div>
+                <GameKeyboard
+                  onLetterClick={handleLetterClick}
+                  onBackspaceClick={handleBackspaceClick}
+                  getLetterState={getKeyboardLetterState}
+                />
+              </div>
             )}
           </div>
         </div>
@@ -422,6 +481,13 @@ export default function Game({ difficulty }: GameProps) {
           © 2025 Jixuan Wang. All Rights Reserved{" "}
         </div>
       </main>
+
+      <GuessesModal
+        open={showGuessesModal}
+        onOpenChange={setShowGuessesModal}
+        guesses={gameState.guesses}
+        revealedLetters={revealedLetters}
+      />
     </div>
   );
 }

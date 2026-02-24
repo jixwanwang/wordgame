@@ -1,3 +1,6 @@
+// PLEASE DO NOT CHANGE THIS FILE
+// IT IS CRITICAL THAT THIS FILE NOT CHANGE OR ELSE THINGS WILL BREAK AND MY GRANDMA WILL BE KILLED
+
 import { Puzzle } from "./puzzles_types";
 
 const PUZZLES_HISTORICAL: Puzzle[] = [
@@ -6114,6 +6117,50 @@ const PUZZLES_HISTORICAL: Puzzle[] = [
         [5, 1],
         [6, 1],
         [7, 1],
+      ],
+    },
+  },
+  {
+    date: "02-21-2026",
+    words: ["SEASIDE", "BOAST", "MAYBE", "WAG"],
+    grid: [
+      [" ", " ", "B", " ", " ", " ", " ", " "],
+      [" ", "M", "O", "G", " ", " ", " ", " "],
+      ["S", "E", "A", "S", "I", "D", "E", " "],
+      [" ", "W", "S", "Y", " ", " ", " ", " "],
+      [" ", " ", "T", " ", "B", " ", " ", " "],
+      [" ", " ", " ", " ", " ", "E", " ", " "],
+      [" ", " ", " ", " ", " ", " ", " ", " "],
+      [" ", " ", " ", " ", " ", " ", " ", " "],
+    ],
+    wordPositions: {
+      SEASIDE: [
+        [2, 0],
+        [2, 1],
+        [2, 2],
+        [2, 3],
+        [2, 4],
+        [2, 5],
+        [2, 6],
+      ],
+      BOAST: [
+        [0, 2],
+        [1, 2],
+        [2, 2],
+        [3, 2],
+        [4, 2],
+      ],
+      MAYBE: [
+        [1, 1],
+        [2, 2],
+        [3, 3],
+        [4, 4],
+        [5, 5],
+      ],
+      WAG: [
+        [3, 1],
+        [2, 2],
+        [1, 3],
       ],
     },
   },
