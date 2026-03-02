@@ -36,6 +36,8 @@ export const results = pgTable(
     won: boolean("won").notNull(),
     // Timestamp when result was submitted
     submittedAt: timestamp("submitted_at").notNull().defaultNow(),
+    // Whether the result was submitted after the puzzle's day (historical play)
+    playedLate: boolean("played_late").notNull().default(false),
   },
   (table) => ({
     // Composite primary key: one result per user per date

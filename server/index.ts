@@ -111,7 +111,8 @@ export function createApp(db: Database) {
         const results = convertHistoryToResults(history);
         for (const result of results) {
           try {
-            await db.insertPuzzleResult(username, result.date, result.guesses, result.won);
+            // Uploaded history is treated as on-time (playedLate: false)
+            await db.insertPuzzleResult(username, result.date, result.guesses, result.won, false);
           } catch (error) {
             // Log but don't fail registration if history sync fails
             console.error(`Failed to sync history for date ${result.date}:`, error);
@@ -128,6 +129,7 @@ export function createApp(db: Database) {
             numGuesses: result.numGuesses,
             won: result.won,
             submittedAt: new Date(),
+            playedLate: false,
           }));
           const { currentStreak, lastCompletedDate } = computeCurrentStreakFromHistory(puzzleResults);
           if (lastCompletedDate) {
@@ -210,7 +212,8 @@ export function createApp(db: Database) {
         const results = convertHistoryToResults(history);
         for (const result of results) {
           try {
-            await db.insertPuzzleResult(username, result.date, result.guesses, result.won);
+            // Uploaded history is treated as on-time (playedLate: false)
+            await db.insertPuzzleResult(username, result.date, result.guesses, result.won, false);
           } catch (error) {
             // Log but don't fail login if history sync fails
             console.error(`Failed to sync history for date ${result.date}:`, error);
@@ -429,14 +432,18 @@ export function createApp(db: Database) {
       // Extract date from puzzleId (format: puzzle_MM_DD_YYYY)
       const datePart = puzzleId.replace("puzzle_", "").replace(/_/g, "-");
 
+      // Determine if the puzzle is being played after its day (historical play)
+      const today = getTodayInPacificTime();
+      const playedLate = datePart !== today;
+
       // Get current user stats to check if they've already submitted for this date
       const currentStats = await db.getUserStats(username);
 
-      // Check if user has already submitted for this date
-      if (currentStats != null && currentStats.lastCompletedDate === datePart) {
+      // Check if user has already submitted for today's puzzle (only relevant for on-time plays)
+      if (!playedLate && currentStats != null && currentStats.lastCompletedDate === datePart) {
         // User has already submitted for this date, don't update streak
         // But still allow the result to be stored (insertPuzzleResult uses onConflictDoNothing)
-        await db.insertPuzzleResult(username, datePart, guesses, won);
+        await db.insertPuzzleResult(username, datePart, guesses, won, false);
 
         return res.json({
           success: true,
@@ -445,9 +452,17 @@ export function createApp(db: Database) {
       }
 
       // Store result in database
-      await db.insertPuzzleResult(username, datePart, guesses, won);
+      await db.insertPuzzleResult(username, datePart, guesses, won, playedLate);
 
-      // Calculate new streak
+      if (playedLate) {
+        // Historical play: do not update streak or lastCompletedDate
+        return res.json({
+          success: true,
+          streak: currentStats?.currentStreak ?? 0,
+        });
+      }
+
+      // Calculate new streak (only for today's puzzle)
       let newStreak = 0;
 
       if (won) {

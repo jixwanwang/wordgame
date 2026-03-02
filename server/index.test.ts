@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { createApp } from './index.js';
 import type { Database, PuzzleResult, UserStats } from './db.js';
 import { generateAuthToken, verifyAuthToken } from './auth.js';
+import { getTodayInPacificTime } from './time-utils.js';
 
 // Mock database for testing
 class MockDatabase implements Database {
@@ -62,7 +63,8 @@ class MockDatabase implements Database {
     username: string,
     date: string,
     guesses: string[],
-    won: boolean
+    won: boolean,
+    playedLate: boolean,
   ): Promise<void> {
     const key = `${username}_${date}`;
     this.results.set(key, {
@@ -72,6 +74,7 @@ class MockDatabase implements Database {
       numGuesses: guesses.length,
       won,
       submittedAt: new Date(),
+      playedLate,
     });
   }
 
@@ -564,7 +567,39 @@ describe('API Endpoints', () => {
   });
 
   describe('POST /api/submit', () => {
-    test('should successfully submit result with valid JWT token', async () => {
+    test('should successfully submit today\'s puzzle and increment streak', async () => {
+      const db = new MockDatabase();
+      await db.createUser('user123', 'password123');
+      const app = createApp(db);
+      const username = 'user123';
+      const token = generateAuthToken(username);
+      const today = getTodayInPacificTime();
+      const puzzleId = `puzzle_${today.replace(/-/g, '_')}`;
+
+      const response = await request(app)
+        .post('/api/submit')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          puzzleId,
+          guesses: ['A', 'B', 'C'],
+          won: true,
+        })
+        .expect(200)
+        .expect('Content-Type', /json/);
+
+      assert.strictEqual(response.body.success, true);
+      assert.strictEqual(typeof response.body.streak, 'number');
+      assert.strictEqual(response.body.streak, 1);
+
+      // Verify result was stored in database
+      const result = await db.getPuzzleResult(username, today);
+      assert.ok(result);
+      assert.deepStrictEqual(result.guesses, ['A', 'B', 'C']);
+      assert.strictEqual(result.won, true);
+      assert.strictEqual(result.playedLate, false);
+    });
+
+    test('should submit a historical puzzle without affecting streak', async () => {
       const db = new MockDatabase();
       await db.createUser('user123', 'password123');
       const app = createApp(db);
@@ -583,14 +618,19 @@ describe('API Endpoints', () => {
         .expect('Content-Type', /json/);
 
       assert.strictEqual(response.body.success, true);
-      assert.strictEqual(typeof response.body.streak, 'number');
-      assert.strictEqual(response.body.streak, 1);
+      // Streak should not be incremented for a historical play
+      assert.strictEqual(response.body.streak, 0);
 
-      // Verify result was stored in database
+      // Verify result was stored with playedLate: true
       const result = await db.getPuzzleResult(username, '01-15-2025');
       assert.ok(result);
       assert.deepStrictEqual(result.guesses, ['A', 'B', 'C']);
       assert.strictEqual(result.won, true);
+      assert.strictEqual(result.playedLate, true);
+
+      // Verify user stats were NOT updated
+      const stats = await db.getUserStats(username);
+      assert.strictEqual(stats, null);
     });
 
     test('should fail when JWT token is missing', async () => {

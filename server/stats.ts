@@ -54,6 +54,11 @@ function computeStatsFromHistory(puzzles: PuzzleResult[]): Stats {
       bestGameGuesses = puzzle.numGuesses;
     }
 
+    // Late plays count for numGames/numWon/bestGame/favoriteFirstGuess but not streaks
+    if (puzzle.playedLate) {
+      continue;
+    }
+
     if (!puzzle.won) {
       // Loss breaks the streak - check if current streak is best before resetting
       if (currentStreak > bestStreakCount) {
@@ -140,8 +145,18 @@ function computeCurrentStreakFromHistory(puzzles: PuzzleResult[]): {
     };
   }
 
+  // Exclude late plays from streak calculation
+  const onTimePuzzles = puzzles.filter((p) => !p.playedLate);
+
+  if (onTimePuzzles.length === 0) {
+    return {
+      currentStreak: 0,
+      lastCompletedDate: null,
+    };
+  }
+
   // Sort puzzles by date (newest first)
-  const sortedPuzzles = [...puzzles].sort((a, b) => {
+  const sortedPuzzles = [...onTimePuzzles].sort((a, b) => {
     const dateA = parseDate(a.date);
     const dateB = parseDate(b.date);
     return dateB.getTime() - dateA.getTime();

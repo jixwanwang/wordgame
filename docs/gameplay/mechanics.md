@@ -98,11 +98,14 @@ A streak is the count of consecutive daily wins.
 
 ### Server Streak Calculation
 
-On `POST /api/submit` (`server/index.ts:451–474`):
-1. If the user has already submitted for this date, the existing record is returned unchanged.
-2. If **won**: check if `lastCompletedDate` is the day before today. If yes, `currentStreak += 1`. Otherwise reset to 1.
-3. If **lost**: reset `currentStreak` to 0.
-4. Write updated streak and `lastCompletedDate` to the `user_stats` table.
+On `POST /api/submit` (`server/index.ts`):
+1. The puzzle date is compared to today's date in Pacific Time. If they differ, the result is stored with `playedLate = true` and streak is not modified.
+2. If the user has already submitted for today's date, the existing record is returned unchanged.
+3. If **won** (on time): check if `lastCompletedDate` is the day before today. If yes, `currentStreak += 1`. Otherwise reset to 1.
+4. If **lost** (on time): reset `currentStreak` to 0.
+5. Write updated streak and `lastCompletedDate` to the `user_stats` table.
+
+Results with `playedLate = true` are excluded from streak computation entirely — they do not extend, break, or reset a streak.
 
 ### Client Streak Calculation
 
@@ -170,6 +173,7 @@ Two tables, defined in `server/schema.ts`.
 | `numGuesses` | integer | total guesses consumed |
 | `won` | boolean | |
 | `submittedAt` | timestamp | |
+| `playedLate` | boolean | `true` if submitted after the puzzle's day; default `false` |
 
 Primary key is `(username, date)`.
 

@@ -34,8 +34,11 @@ Defined via Drizzle ORM in `server/schema.ts`. The production database is Postgr
 | `numGuesses` | integer | |
 | `won` | boolean | |
 | `submittedAt` | timestamp | |
+| `playedLate` | boolean | Default `false`; `true` when submitted after the puzzle's day |
 
 Primary key is `(username, date)` — one result per user per puzzle date.
+
+`playedLate` is `false` for all existing rows (meaning they are treated as on-time plays). It is set to `true` when a user submits via `POST /api/submit` for a puzzle date that is not today in Pacific Time. Bulk history uploaded at login/register is always stored with `playedLate = false`.
 
 ### `userStats`
 | Column | Type | Notes |
