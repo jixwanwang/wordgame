@@ -20,7 +20,7 @@ export function GameOverStats({
   const [copied, setCopied] = useState(false);
 
   const shareText = () => {
-    const base = `https://crosses.io#${puzzleNumber} ${totalLettersRevealed}/${numGuesses}`;
+    const base = `crosses.io#${puzzleNumber} ${totalLettersRevealed}/${numGuesses}`;
     return won ? `${base} ${currentStreak}🔥` : base;
   };
 
