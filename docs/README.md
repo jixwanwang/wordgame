@@ -49,6 +49,9 @@ The project is structured as a single-package monorepo. Client and server share 
 
 ## Subsystem Documentation
 
+### Gameplay
+- [Gameplay Mechanics](gameplay/mechanics.md) — Rules, guessing, scoring, streaks, stats, history storage
+
 ### Client
 - [Client Overview](client/overview.md) — React app, components, routing
 - [State Management](client/state.md) — Redux slices, thunks, selectors
