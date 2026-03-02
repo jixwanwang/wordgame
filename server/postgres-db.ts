@@ -122,6 +122,7 @@ export class PostgresDatabase implements Database {
         numGuesses: row.numGuesses,
         won: row.won,
         submittedAt: row.submittedAt,
+        playedLate: row.playedLate,
       };
     } catch (error) {
       console.error(`Error in getPuzzleResult for user ${username}, date ${date}:`, error);
@@ -144,6 +145,7 @@ export class PostgresDatabase implements Database {
       numGuesses: row.numGuesses,
       won: row.won,
       submittedAt: row.submittedAt,
+      playedLate: row.playedLate,
     }));
   }
 
@@ -152,6 +154,7 @@ export class PostgresDatabase implements Database {
     date: string,
     guesses: string[],
     won: boolean,
+    playedLate: boolean,
   ): Promise<void> {
     const lowerUsername = username.toLowerCase();
 
@@ -168,6 +171,7 @@ export class PostgresDatabase implements Database {
         guesses: guessesJson,
         numGuesses,
         won,
+        playedLate,
       })
       .onConflictDoNothing({
         target: [results.username, results.date],

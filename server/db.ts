@@ -9,6 +9,7 @@ export interface PuzzleResult {
   numGuesses: number;
   won: boolean;
   submittedAt: Date;
+  playedLate: boolean;
 }
 
 export interface UserStats {
@@ -65,6 +66,7 @@ export interface Database {
     date: string,
     guesses: string[],
     won: boolean,
+    playedLate: boolean,
   ): Promise<void>;
 
   /**
@@ -151,6 +153,7 @@ export class StubDatabase implements Database {
     date: string,
     guesses: string[],
     won: boolean,
+    playedLate: boolean,
   ): Promise<void> {
     const key = `${username}_${date}`;
     const result: PuzzleResult = {
@@ -160,6 +163,7 @@ export class StubDatabase implements Database {
       numGuesses: guesses.length,
       won,
       submittedAt: new Date(),
+      playedLate,
     };
     this.results.set(key, result);
   }
