@@ -44,7 +44,8 @@ class MockDatabase implements Database {
   }
 
   async getPuzzleResult(username: string, date: string): Promise<PuzzleResult | null> {
-    const key = `${username}_${date}`;
+    const lowerUsername = username.toLowerCase();
+    const key = `${lowerUsername}_${date}`;
     return this.results.get(key) || null;
   }
 
@@ -66,9 +67,13 @@ class MockDatabase implements Database {
     won: boolean,
     playedLate: boolean,
   ): Promise<void> {
-    const key = `${username}_${date}`;
+    const lowerUsername = username.toLowerCase();
+    const key = `${lowerUsername}_${date}`;
+    if (this.results.has(key)) {
+      return;
+    }
     this.results.set(key, {
-      username,
+      username: lowerUsername,
       date,
       guesses,
       numGuesses: guesses.length,
