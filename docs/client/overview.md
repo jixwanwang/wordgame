@@ -10,7 +10,14 @@ The client is a React 18 single-page application built with Vite. It lives entir
 
 ## Routing
 
-Wouter is used for client-side routing. The app is essentially single-page with one route (`/`). The router is lightweight and has no complex navigation.
+Wouter is used for client-side routing. There are two path-based routes:
+
+| Path | Component |
+|---|---|
+| `/` | `Game` with `difficulty="normal"` |
+| `/hard` | `Game` with `difficulty="hard"` |
+
+Both routes support an optional `?date=MM-DD-YYYY` query parameter. When present, the game loads the puzzle for that specific past date instead of today's. `useSearch()` and `useLocation()` from Wouter are used inside `game.tsx` to read and navigate the query string. Note: variables read from `useSearch()` that appear in `useEffect` dependency arrays must be declared before those `useEffect` calls.
 
 ## Component Tree
 
@@ -24,7 +31,7 @@ All components live in `client/src/components/`.
 | `SquareInput` | A single interactive grid cell |
 | `AuthModal` | Login and registration modal |
 | `StatsModal` | User statistics summary |
-| `HistoryModal` | Browse past completed puzzles |
+| `HistoryModal` | Browse past puzzles; shows score for completed dates and a "Play [date]" button for unplayed past dates |
 | `GameOverModal` | Win/loss screen shown when the game ends |
 
 ## Styling
@@ -33,7 +40,7 @@ Tailwind CSS 3.4 is used throughout. Radix UI primitives underpin interactive co
 
 ## Data Flow
 
-1. On mount, `game.tsx` dispatches thunks to load the puzzle and (if authenticated) the user's history.
+1. On mount (or when the `?date=` param changes), `game.tsx` dispatches thunks to load the puzzle for today or the specified past date, and (if authenticated) the user's history.
 2. User input flows through `GameKeyboard` → Redux actions → `gameSlice`.
 3. On game completion, a submit thunk sends results to the server and updates localStorage.
 4. Derived display data (revealed cells, letter counts, etc.) is computed by selectors.

@@ -39,10 +39,31 @@ import {
 import { setDifficulty } from "@/store/slices/gameSlice";
 import { cn } from "@/lib/utils";
 import { GuessesModal } from "@/components/guesses-modal";
+import { useSearch, useLocation } from "wouter";
+import { getTodayInPacificTime } from "../../../server/time-utils";
 
 // separate the storage layer with a proper api for actions rather than whole state updates
 // use the error popup for tutorial. start with guess a letter (and give a suggestion that will guarantee multiple)
 // prompt users to guess a word if they get close to a word (2 letters off), like g_ar_ or something
+
+function formatPastPuzzleDate(apiDate: string): string {
+  const [month, day, year] = apiDate.split("-").map(Number);
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+  return `${monthNames[month - 1]} ${day}, ${year}`;
+}
 
 interface GameProps {
   difficulty: "normal" | "hard";
@@ -80,11 +101,20 @@ export default function Game({ difficulty }: GameProps) {
     return newGrid;
   }, [currentPuzzle, revealedLetters]);
 
+  // Parse date URL param to support playing past puzzles
+  const search = useSearch();
+  const rawSearch = search.startsWith("?") ? search.slice(1) : search;
+  const urlParams = new URLSearchParams(rawSearch);
+  const dateParam = urlParams.get("date") ?? undefined;
+  const today = getTodayInPacificTime();
+  const isPlayingPastPuzzle = dateParam !== undefined && dateParam !== today;
+  const [, navigate] = useLocation();
+
   // Load puzzle and set difficulty on mount/difficulty change
   useEffect(() => {
     dispatch(setDifficulty(difficulty));
-    dispatch(fetchPuzzleThunk({ difficulty }));
-  }, [difficulty, dispatch]);
+    dispatch(fetchPuzzleThunk({ difficulty, date: dateParam }));
+  }, [difficulty, dateParam, dispatch]);
 
   // Reset to results tab when game ends
   useEffect(() => {
@@ -104,6 +134,10 @@ export default function Game({ difficulty }: GameProps) {
 
   const longestWordInPuzzle =
     currentPuzzle?.words.reduce((max, word) => Math.max(max, word.length), 0) ?? 7;
+
+  const handleGoToToday = useCallback(() => {
+    navigate(difficulty === "hard" ? "/hard" : "/");
+  }, [navigate, difficulty]);
 
   // Show auth modal if not logged in, and refresh token if needed
   useEffect(() => {
@@ -291,10 +325,21 @@ export default function Game({ difficulty }: GameProps) {
       <header className="text-center py-3 px-4 max-w-[440px] mx-auto" data-testid="game-header">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="flex items-end gap-1">
-              <h1 className="text-2xl sm:text-3xl font-bold text-dark">Crosses</h1>
-              <h2 className="pb-1">#{puzzleNumber}</h2>
-            </div>
+            {isPlayingPastPuzzle ? (
+              <button
+                onClick={handleGoToToday}
+                className="flex items-end gap-1 hover:opacity-70 transition-opacity"
+                aria-label="Go to today's puzzle"
+              >
+                <h1 className="text-2xl sm:text-3xl font-bold text-dark">Crosses</h1>
+                <h2 className="pb-1">#{puzzleNumber}</h2>
+              </button>
+            ) : (
+              <div className="flex items-end gap-1">
+                <h1 className="text-2xl sm:text-3xl font-bold text-dark">Crosses</h1>
+                <h2 className="pb-1">#{puzzleNumber}</h2>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {Auth.isAuthenticated() && (
@@ -344,6 +389,18 @@ export default function Game({ difficulty }: GameProps) {
             )}
           </div>
         </div>
+        {dateParam !== undefined && dateParam !== today && (
+          <div className="text-sm text-amber-600 font-medium mt-1">
+            Playing {formatPastPuzzleDate(dateParam)}
+            {" · "}
+            <button
+              onClick={handleGoToToday}
+              className="underline hover:opacity-70 transition-opacity"
+            >
+              back to today
+            </button>
+          </div>
+        )}
       </header>
 
       {/* Auth Modal */}
@@ -359,7 +416,14 @@ export default function Game({ difficulty }: GameProps) {
       <StatsModal open={showStatsModal} onOpenChange={setShowStatsModal} />
 
       {/* History Modal */}
-      <HistoryModal open={showHistoryModal} onOpenChange={setShowHistoryModal} />
+      <HistoryModal
+        open={showHistoryModal}
+        onOpenChange={setShowHistoryModal}
+        onPlayDate={(date) => {
+          setShowHistoryModal(false);
+          navigate(`${difficulty === "hard" ? "/hard" : "/"}?date=${date}`);
+        }}
+      />
 
       <main className="container mx-auto px-2 sm:px-4 pb-4 max-w-2xl">
         <div className="relative">
@@ -441,16 +505,18 @@ export default function Game({ difficulty }: GameProps) {
             ) : activeTab === "results" ? (
               <div className="mb-2 flex flex-col items-center gap-2">
                 <GameStats gameState={gameState} grid={grid} />
-                <GameOverStats
-                  won={gameStatus === "won"}
-                  numGuesses={NUM_GUESSES - totalGuessesRemaining}
-                  totalLettersRevealed={calculateRevealedLetterCount(
-                    currentPuzzle.words,
-                    revealedLetters,
-                  )}
-                  puzzleNumber={puzzleNumber}
-                  currentStreak={currentStreak}
-                />
+                {!isPlayingPastPuzzle && (
+                  <GameOverStats
+                    won={gameStatus === "won"}
+                    numGuesses={NUM_GUESSES - totalGuessesRemaining}
+                    totalLettersRevealed={calculateRevealedLetterCount(
+                      currentPuzzle.words,
+                      revealedLetters,
+                    )}
+                    puzzleNumber={puzzleNumber}
+                    currentStreak={currentStreak}
+                  />
+                )}
               </div>
             ) : (
               <div className="mb-2 flex flex-col items-center gap-3 w-full">
