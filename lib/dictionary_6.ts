@@ -39,6 +39,7 @@ export const DICTIONARY_6 = [
   "BACKUP",
   "BAKERY",
   "BALLET",
+  "BANNER",
   "BARBER",
   "BARELY",
   "BARREL",

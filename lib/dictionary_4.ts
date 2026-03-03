@@ -156,6 +156,7 @@ export const DICTIONARY_4 = [
   "LOST",
   "LOVE",
   "MADE",
+  "MAID",
   "MAIL",
   "MAIN",
   "MAKE",
