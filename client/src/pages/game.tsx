@@ -65,6 +65,41 @@ function formatPastPuzzleDate(apiDate: string): string {
   return `${monthNames[month - 1]} ${day}, ${year}`;
 }
 
+interface AuthPromptConditions {
+  isAuthenticated: boolean;
+  lastCompletedDate: string | null;
+  gameStatus: "playing" | "won" | "lost";
+  isPlayingPastPuzzle: boolean;
+  isTodayPuzzle: boolean;
+  hasPrompted: boolean;
+  isModalOpen: boolean;
+}
+
+function shouldPromptForAuth(conditions: AuthPromptConditions): boolean {
+  if (conditions.isAuthenticated) {
+    return false;
+  }
+  if (conditions.lastCompletedDate == null) {
+    return false;
+  }
+  if (conditions.gameStatus === "playing") {
+    return false;
+  }
+  if (conditions.isPlayingPastPuzzle) {
+    return false;
+  }
+  if (!conditions.isTodayPuzzle) {
+    return false;
+  }
+  if (conditions.hasPrompted) {
+    return false;
+  }
+  if (conditions.isModalOpen) {
+    return false;
+  }
+  return true;
+}
+
 interface GameProps {
   difficulty: "normal" | "hard";
 }
@@ -130,7 +165,9 @@ export default function Game({ difficulty }: GameProps) {
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [hasAutoPromptedAuth, setHasAutoPromptedAuth] = useState(false);
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const authPromptTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const longestWordInPuzzle =
     currentPuzzle?.words.reduce((max, word) => Math.max(max, word.length), 0) ?? 7;
@@ -142,13 +179,7 @@ export default function Game({ difficulty }: GameProps) {
   // Show auth modal if not logged in, and refresh token if needed
   useEffect(() => {
     const checkAuth = async () => {
-      // if the user is not authenticated and has game history, pop up the register/login modal.
       if (!Auth.isAuthenticated()) {
-        if (getGameHistory().lastCompletedDate != null) {
-          setTimeout(() => {
-            setShowAuthModal(true);
-          }, 500);
-        }
         return;
       }
 
@@ -158,9 +189,6 @@ export default function Game({ difficulty }: GameProps) {
         if (!refreshed) {
           // Refresh failed, log the user out
           dispatch(handleLogout());
-          setTimeout(() => {
-            setShowAuthModal(true);
-          }, 500);
           return;
         }
       } else {
@@ -168,9 +196,6 @@ export default function Game({ difficulty }: GameProps) {
         const isValid = await API.checkAuthToken();
         if (!isValid) {
           dispatch(handleLogout());
-          setTimeout(() => {
-            setShowAuthModal(true);
-          }, 500);
           return;
         }
       }
@@ -178,6 +203,50 @@ export default function Game({ difficulty }: GameProps) {
 
     checkAuth();
   }, [dispatch]);
+
+  useEffect(() => {
+    const history = getGameHistory();
+    const puzzleDate = currentPuzzle != null ? currentPuzzle.date : null;
+    const isTodayPuzzle = puzzleDate != null && puzzleDate === today;
+    const shouldPrompt = shouldPromptForAuth({
+      isAuthenticated: Auth.isAuthenticated(),
+      lastCompletedDate: history.lastCompletedDate,
+      gameStatus,
+      isPlayingPastPuzzle,
+      isTodayPuzzle,
+      hasPrompted: hasAutoPromptedAuth,
+      isModalOpen: showAuthModal,
+    });
+
+    if (shouldPrompt && authPromptTimeoutRef.current == null) {
+      authPromptTimeoutRef.current = setTimeout(() => {
+        setShowAuthModal(true);
+        setHasAutoPromptedAuth(true);
+        authPromptTimeoutRef.current = null;
+      }, 3000);
+    }
+
+    if (!shouldPrompt && authPromptTimeoutRef.current != null) {
+      clearTimeout(authPromptTimeoutRef.current);
+      authPromptTimeoutRef.current = null;
+    }
+  }, [
+    currentPuzzle,
+    gameStatus,
+    hasAutoPromptedAuth,
+    isPlayingPastPuzzle,
+    showAuthModal,
+    today,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (authPromptTimeoutRef.current != null) {
+        clearTimeout(authPromptTimeoutRef.current);
+        authPromptTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const showToast = useCallback((text: string) => {
     // Clear any existing timeout
