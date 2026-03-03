@@ -29,7 +29,7 @@ All components live in `client/src/components/`.
 | `GameKeyboard` | Letter/word input interface |
 | `GameStats` | Displays live stats: guesses remaining, streak, revealed letters |
 | `SquareInput` | A single interactive grid cell |
-| `AuthModal` | Login and registration modal |
+| `AuthModal` | Login and registration modal (auto-prompts 3s after completing today's puzzle for unauthenticated users with local history; never auto-prompts for past puzzles) |
 | `StatsModal` | User statistics summary |
 | `HistoryModal` | Browse past puzzles; shows score for completed dates and a "Play [date]" button for unplayed past dates |
 | `GameOverModal` | Win/loss screen shown when the game ends |
