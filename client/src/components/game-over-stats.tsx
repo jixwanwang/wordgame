@@ -21,7 +21,7 @@ export function GameOverStats({
 
   const shareText = () => {
     const base = `crosses.io#${puzzleNumber} ${totalLettersRevealed}/${numGuesses}`;
-    return won ? `${base} ${currentStreak}🔥` : base;
+    return won ? `${base} 🔥${currentStreak}` : base;
   };
 
   const handleCopy = async () => {
