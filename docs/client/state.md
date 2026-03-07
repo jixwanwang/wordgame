@@ -47,3 +47,17 @@ Selectors live in `gameSelectors`, `puzzleSelectors`, and `gridSelectors`. They 
 - Current guess validity
 
 Selectors are memoized via `createSelector` where appropriate.
+
+## Hooks
+
+### `useHintText`
+
+Defined in `client/src/hooks/use-hint-text.ts`.
+
+Reads game state from Redux and returns a `string | null` representing a contextual hint for the current player. Returns `null` when no hint should be shown. Hints are only shown to brand-new users (no `wordgame-history` key in localStorage), and only while `gameStatus === "playing"`. Toast messages take display priority — the hint is only rendered when there is no active toast.
+
+Hint stages progress in order:
+1. **No guesses yet** — suggests the letter that appears in the most puzzle words.
+2. **After first guess** — "Guess more letters to reveal them and make words!" Stays until a word has ≤2 unique unrevealed letters.
+3. **Word is close** — "Try guessing the word WORD!" (names the specific close word). Stays until the user submits a correct word guess.
+4. **Word correctly guessed** — "Guessing a word correctly reveals all of its letters!" Disappears after one more guess, then hints stop entirely.

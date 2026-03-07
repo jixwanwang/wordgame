@@ -34,6 +34,19 @@ All components live in `client/src/components/`.
 | `HistoryModal` | Browse past puzzles; shows score for completed dates and a "Play [date]" button for unplayed past dates |
 | `GameOverModal` | Win/loss screen shown when the game ends |
 
+## New-User Hint System
+
+During active gameplay, an overlay message area sits above the `SquareInput`. Two message types share this position:
+
+| Type | Source | Style |
+|---|---|---|
+| Toast | `toastMessage` state, shown via `showToast()` | Dark background, white text — used for validation errors and feedback |
+| Hint | `useHintText()` hook | Blue tinted — used for contextual guidance (e.g., "Guess a letter first!") |
+
+Toast takes priority: if a toast is active the hint is suppressed. When neither is active, nothing is shown. The hint element has `data-testid="hint-message"`.
+
+The hint logic lives in `client/src/hooks/use-hint-text.ts`. It reads game state (game status, guessed letters, revealed count, puzzle, guesses remaining) and returns a string or null. Conditions are stubbed with TODO comments for future authoring.
+
 ## Styling
 
 Tailwind CSS 3.4 is used throughout. Radix UI primitives underpin interactive components (dialogs, dropdowns, etc.). Icons come from `lucide-react`.
