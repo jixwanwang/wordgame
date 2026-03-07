@@ -537,6 +537,7 @@ export const DICTIONARY_7 = [
   "SEAFOOD",
   "SEASIDE",
   "SECTION",
+  "SECULAR",
   "SEGMENT",
   "SEIZURE",
   "SELFISH",
