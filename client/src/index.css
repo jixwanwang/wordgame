@@ -254,3 +254,31 @@
 .crossword-flip-back {
   transform: rotateY(180deg);
 }
+
+/* Hint enter/exit transitions */
+.hint-enter {
+  opacity: 0;
+}
+.hint-enter-active {
+  opacity: 1;
+  transition: opacity 500ms ease;
+}
+.hint-exit {
+  opacity: 1;
+}
+.hint-exit-active {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-20px) !important;
+  transition: opacity 500ms ease, transform 400ms ease;
+}
+
+/* Hint float animation */
+@keyframes hint-float {
+  0%, 100% { background-color: rgb(107 114 128); } /* gray-500 */
+  50% { background-color: rgb(55 65 81); } /* gray-700 */
+}
+
+.hint-float {
+  transform: translateX(-50%) translateY(-10px);
+  animation: hint-float 3s ease-in-out infinite;
+}
