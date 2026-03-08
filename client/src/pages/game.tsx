@@ -545,7 +545,7 @@ export default function Game({ difficulty }: GameProps) {
                     {hintText != null && (
                       <CSSTransition key={hintText} timeout={300} classNames="hint">
                         <div
-                          className="absolute top-0 left-1/2 hint-float bg-gray-500 text-white px-3 py-2 text-sm font-medium z-10 whitespace-nowrap shadow-lg"
+                          className="absolute top-1 left-1/2 hint-float sm:top-0 bg-gray-500 text-white px-3 py-2 text-sm font-medium z-10 whitespace-nowrap shadow-lg"
                           data-testid="hint-message"
                         >
                           {hintText}

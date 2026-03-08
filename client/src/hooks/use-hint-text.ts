@@ -44,7 +44,7 @@ export function useHintText(): string | null {
     if (bestSharedLetter != null) {
       return `Start by guessing a letter. Hint: ${bestSharedLetter}`;
     }
-    return "Start by guessing a letter";
+    return "Start by guessing a letter.";
   }
 
   const puzzleWords = currentPuzzle.words.map((w) => w.toUpperCase());
@@ -57,7 +57,7 @@ export function useHintText(): string | null {
   if (firstCorrectWordIdx !== -1) {
     const guessesAfter = guesses.length - 1 - firstCorrectWordIdx;
     if (guessesAfter === 0) {
-      return "Nice! Guessing a word correctly reveals ALL of its letters!";
+      return "Nice! Guess a word correctly to reveal ALL its letters.";
     }
     return null;
   }
@@ -77,5 +77,5 @@ export function useHintText(): string | null {
   }
 
   // Stage 2: keep guessing letters.
-  return "Guess more letters to uncover words";
+  return "Guess more letters to uncover words.";
 }
