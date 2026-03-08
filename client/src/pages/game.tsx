@@ -40,6 +40,7 @@ import { setDifficulty } from "@/store/slices/gameSlice";
 import { cn } from "@/lib/utils";
 import { GuessesModal } from "@/components/guesses-modal";
 import { useHintText } from "@/hooks/use-hint-text";
+import { TransitionGroup, CSSTransition } from "react-transition-group";
 import { useSearch, useLocation } from "wouter";
 import { getTodayInPacificTime } from "../../../server/time-utils";
 
@@ -539,14 +540,20 @@ export default function Game({ difficulty }: GameProps) {
                   >
                     {toastMessage}
                   </div>
-                ) : hintText != null ? (
-                  <div
-                    className="absolute top-0 left-1/2 hint-float bg-gray-500 text-white px-3 py-2 text-sm font-medium z-10 whitespace-nowrap shadow-lg"
-                    data-testid="hint-message"
-                  >
-                    {hintText}
-                  </div>
-                ) : null}
+                ) : (
+                  <TransitionGroup>
+                    {hintText != null && (
+                      <CSSTransition key={hintText} timeout={300} classNames="hint">
+                        <div
+                          className="absolute top-0 left-1/2 hint-float bg-gray-500 text-white px-3 py-2 text-sm font-medium z-10 whitespace-nowrap shadow-lg"
+                          data-testid="hint-message"
+                        >
+                          {hintText}
+                        </div>
+                      </CSSTransition>
+                    )}
+                  </TransitionGroup>
+                )}
               </div>
             ) : (
               <div className="w-full mb-3 flex justify-center">
