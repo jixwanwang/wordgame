@@ -257,10 +257,11 @@
 
 /* Hint float animation */
 @keyframes hint-float {
-  0%, 60%, 100% { transform: translateX(-50%) translateY(-10px); }
-  80% { transform: translateX(-50%) translateY(-16px); }
+  0%, 100% { background-color: rgb(107 114 128); } /* gray-500 */
+  50% { background-color: rgb(55 65 81); } /* gray-700 */
 }
 
 .hint-float {
-  animation: hint-float 1.5s ease-in-out infinite;
+  transform: translateX(-50%) translateY(-10px);
+  animation: hint-float 3s ease-in-out infinite;
 }
