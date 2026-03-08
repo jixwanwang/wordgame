@@ -254,3 +254,13 @@
 .crossword-flip-back {
   transform: rotateY(180deg);
 }
+
+/* Hint float animation */
+@keyframes hint-float {
+  0%, 60%, 100% { transform: translateX(-50%) translateY(-10px); }
+  80% { transform: translateX(-50%) translateY(-16px); }
+}
+
+.hint-float {
+  animation: hint-float 1.5s ease-in-out infinite;
+}

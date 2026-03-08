@@ -541,7 +541,7 @@ export default function Game({ difficulty }: GameProps) {
                   </div>
                 ) : hintText != null ? (
                   <div
-                    className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-[8px] bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2 rounded-md text-sm font-medium z-10 whitespace-nowrap"
+                    className="absolute top-0 left-1/2 hint-float bg-gray-500 text-white px-3 py-2 text-sm font-medium z-10 whitespace-nowrap shadow-lg"
                     data-testid="hint-message"
                   >
                     {hintText}
