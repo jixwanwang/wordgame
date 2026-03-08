@@ -14,7 +14,7 @@ Actions cover: adding a guess, revealing letters, resetting the game, and settin
 ### `puzzleSlice`
 Holds the loaded puzzle data.
 
-Key state: the word list, grid layout, word positions, loading/error state, and difficulty.
+Key state: the word list, grid layout, word positions, loading/error state, and difficulty. Puzzle words and `wordPositions` keys are always uppercase.
 
 Populated by an async thunk that calls `GET /api/puzzle`.
 
@@ -54,10 +54,9 @@ Selectors are memoized via `createSelector` where appropriate.
 
 Defined in `client/src/hooks/use-hint-text.ts`.
 
-Reads game state from Redux and returns a `string | null` representing a contextual hint for the current player. Returns `null` when no hint should be shown. Hints are only shown to brand-new users (no `wordgame-history` key in localStorage), and only while `gameStatus === "playing"`. Toast messages take display priority — the hint is only rendered when there is no active toast.
+Returns a `string | null` hint for new users (no `wordgame-history` in localStorage), only while `gameStatus === "playing"`. Progresses through four stages:
 
-Hint stages progress in order:
-1. **No guesses yet** — suggests the letter that appears in the most puzzle words.
-2. **After first guess** — "Guess more letters to reveal them and make words!" Stays until a word has ≤2 unique unrevealed letters.
-3. **Word is close** — "Try guessing the word WORD!" (names the specific close word). Stays until the user submits a correct word guess.
-4. **Word correctly guessed** — "Guessing a word correctly reveals all of its letters!" Disappears after one more guess, then hints stop entirely.
+1. **No guesses yet** — suggests a letter at a word intersection.
+2. **After first guess** — encourages guessing more letters. Stays until a word is close.
+3. **A word is close** (≤2 unrevealed squares) — names the specific word.
+4. **Word correctly guessed** — explains the mechanic. Disappears after one more guess; hints stop entirely.

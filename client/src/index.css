@@ -261,7 +261,7 @@
 }
 .hint-enter-active {
   opacity: 1;
-  transition: opacity 300ms ease;
+  transition: opacity 500ms ease;
 }
 .hint-exit {
   opacity: 1;
@@ -269,7 +269,7 @@
 .hint-exit-active {
   opacity: 0;
   transform: translateX(-50%) translateY(-20px) !important;
-  transition: opacity 300ms ease, transform 300ms ease;
+  transition: opacity 500ms ease, transform 400ms ease;
 }
 
 /* Hint float animation */

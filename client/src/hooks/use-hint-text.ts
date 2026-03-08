@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { useAppSelector } from "@/store/hooks";
 import { selectGameStatus } from "@/store/selectors/gameSelectors";
 import { selectRevealedLetters } from "@/store/selectors/gridSelectors";
@@ -8,18 +8,8 @@ import type { RootState } from "@/store/index";
 const selectGuesses = (state: RootState) => state.game.guesses;
 
 /**
- * Watches game state and returns a contextual hint string for brand-new users
- * (no localStorage history), cycling through four hint stages. Returns null
- * when no hint should be shown.
- *
- * Hint stages:
- *   1. Game start (no guesses): suggest a letter shared across multiple words.
- *   2. After first guess: "Guess more letters to reveal them and make words."
- *      Stays until a word has ≤2 unique unrevealed letters.
- *   3. A word is close: "You're close to a word — try guessing it!"
- *      Stays until the user submits a correct word guess.
- *   4. Correct word guessed: "Guessing a word correctly reveals all of its letters!"
- *      Disappears after one more guess.
+ * Returns a contextual hint string for brand-new users, cycling through four
+ * stages as they progress. Returns null when no hint should be shown.
  */
 export function useHintText(): string | null {
   const gameStatus = useAppSelector(selectGameStatus);
@@ -27,10 +17,9 @@ export function useHintText(): string | null {
   const currentPuzzle = useAppSelector(selectCurrentPuzzle);
   const guesses = useAppSelector(selectGuesses);
 
-  // Computed once on mount: only show hints to brand-new users.
-  const isNewUser = useMemo(() => localStorage.getItem("wordgame-history") === null, []);
+  const isNewUser = useRef(localStorage.getItem("wordgame-history") === null).current;
 
-  // Find the letter at an intersection cell (a grid cell shared by 2+ words) for hint 1.
+  // Find the letter at a grid cell shared by 2+ words to suggest in hint 1.
   const bestSharedLetter = useMemo(() => {
     if (currentPuzzle == null) return null;
     const cellWordCount: Record<string, number> = {};
@@ -50,7 +39,7 @@ export function useHintText(): string | null {
     return null;
   }
 
-  // Hint 1: no guesses yet — suggest the most cross-word letter.
+  // Stage 1: no guesses yet — suggest a letter at a word intersection.
   if (guesses.length === 0) {
     if (bestSharedLetter != null) {
       return `Start by guessing a letter. Hint: ${bestSharedLetter}`;
@@ -60,12 +49,11 @@ export function useHintText(): string | null {
 
   const puzzleWords = currentPuzzle.words.map((w) => w.toUpperCase());
 
-  // Find the index of the first correct word guess (word submitted that is in the puzzle).
   const firstCorrectWordIdx = guesses.findIndex(
     (g) => g.length > 1 && puzzleWords.includes(g.toUpperCase()),
   );
 
-  // Hint 4: just guessed a word correctly — show once, then disappear after one more guess.
+  // Stage 4: a word was just guessed correctly — show once, then stop. No more hints until the game is over.
   if (firstCorrectWordIdx !== -1) {
     const guessesAfter = guesses.length - 1 - firstCorrectWordIdx;
     if (guessesAfter === 0) {
@@ -74,7 +62,7 @@ export function useHintText(): string | null {
     return null;
   }
 
-  // Hint 3: a word has exactly 2 unrevealed squares — name it.
+  // Stage 3: a word has exactly 2 unrevealed squares — name it.
   const closeWord = currentPuzzle.words.find((word) => {
     const positions = currentPuzzle.wordPositions[word.toUpperCase()];
     if (positions == null) return false;
@@ -88,6 +76,6 @@ export function useHintText(): string | null {
     return `You can guess words too. Hint: ${closeWord.toUpperCase()}`;
   }
 
-  // Hint 2: keep guessing letters.
+  // Stage 2: keep guessing letters.
   return "Guess more letters to uncover words";
 }
