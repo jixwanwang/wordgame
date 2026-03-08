@@ -39,6 +39,8 @@ import {
 import { setDifficulty } from "@/store/slices/gameSlice";
 import { cn } from "@/lib/utils";
 import { GuessesModal } from "@/components/guesses-modal";
+import { useHintText } from "@/hooks/use-hint-text";
+import { TransitionGroup, CSSTransition } from "react-transition-group";
 import { useSearch, useLocation } from "wouter";
 import { getTodayInPacificTime } from "../../../server/time-utils";
 
@@ -168,6 +170,7 @@ export default function Game({ difficulty }: GameProps) {
   const [hasAutoPromptedAuth, setHasAutoPromptedAuth] = useState(false);
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const authPromptTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const hintText = useHintText();
 
   const longestWordInPuzzle =
     currentPuzzle?.words.reduce((max, word) => Math.max(max, word.length), 0) ?? 7;
@@ -529,14 +532,27 @@ export default function Game({ difficulty }: GameProps) {
                   </button>
                 </div>
 
-                {/* Toast message - absolutely positioned at the bottom of the grid */}
-                {toastMessage && (
+                {/* Overlay messages - absolutely positioned above the input area */}
+                {toastMessage ? (
                   <div
                     className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-[8px] bg-gray-800 text-white px-4 py-2 rounded-md text-sm font-medium shadow-lg z-10 whitespace-nowrap"
                     data-testid="toast-message"
                   >
                     {toastMessage}
                   </div>
+                ) : (
+                  <TransitionGroup>
+                    {hintText != null && (
+                      <CSSTransition key={hintText} timeout={300} classNames="hint">
+                        <div
+                          className="absolute top-0 left-1/2 hint-float bg-gray-500 text-white px-3 py-2 text-sm font-medium z-10 whitespace-nowrap shadow-lg"
+                          data-testid="hint-message"
+                        >
+                          {hintText}
+                        </div>
+                      </CSSTransition>
+                    )}
+                  </TransitionGroup>
                 )}
               </div>
             ) : (
