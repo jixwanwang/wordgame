@@ -638,6 +638,7 @@ export default function Game({ difficulty }: GameProps) {
         onOpenChange={setShowGuessesModal}
         guesses={gameState.guesses}
         revealedLetters={revealedLetters}
+        puzzleWords={currentPuzzle?.words ?? []}
       />
     </div>
   );

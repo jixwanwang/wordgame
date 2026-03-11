@@ -62,20 +62,9 @@ export const fetchPuzzleThunk = createAsyncThunk(
 
       // Restore game state if saved state exists
       if (savedState && savedState.guessedLetters.length > 0) {
-        // Merge guessed letters from guesses array
-        const guessedLetters = [...savedState.guessedLetters];
-        savedState.guesses?.forEach((guess) => {
-          guess.split("").forEach((letter) => {
-            if (!guessedLetters.includes(letter)) {
-              guessedLetters.push(letter);
-            }
-          });
-        });
-
         dispatch(
           restoreGameState({
             ...savedState,
-            guessedLetters,
             streak: currentStreak,
           }),
         );
