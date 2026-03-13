@@ -533,27 +533,29 @@ export default function Game({ difficulty }: GameProps) {
                 </div>
 
                 {/* Overlay messages - absolutely positioned above the input area */}
-                {toastMessage ? (
-                  <div
-                    className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-[8px] bg-gray-800 text-white px-4 py-2 rounded-md text-sm font-medium shadow-lg z-10 whitespace-nowrap"
-                    data-testid="toast-message"
-                  >
-                    {toastMessage}
-                  </div>
-                ) : (
-                  <TransitionGroup>
-                    {hintText != null && (
-                      <CSSTransition key={hintText} timeout={300} classNames="hint">
-                        <div
-                          className="absolute top-1 left-1/2 hint-float sm:top-0 bg-gray-500 text-white px-3 py-2 text-sm font-medium z-10 whitespace-nowrap shadow-lg"
-                          data-testid="hint-message"
-                        >
-                          {hintText}
-                        </div>
-                      </CSSTransition>
-                    )}
-                  </TransitionGroup>
-                )}
+                <div>
+                  {toastMessage ? (
+                    <div
+                      className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-[8px] bg-gray-800 text-white px-4 py-2 rounded-md text-sm font-medium shadow-lg z-10 whitespace-nowrap"
+                      data-testid="toast-message"
+                    >
+                      {toastMessage}
+                    </div>
+                  ) : (
+                    <TransitionGroup>
+                      {hintText != null && (
+                        <CSSTransition key={hintText} timeout={300} classNames="hint">
+                          <div
+                            className="absolute top-1 left-1/2 hint-float sm:top-0 bg-gray-500 text-white px-3 py-2 text-sm font-medium z-10 whitespace-nowrap shadow-lg"
+                            data-testid="hint-message"
+                          >
+                            {hintText}
+                          </div>
+                        </CSSTransition>
+                      )}
+                    </TransitionGroup>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="w-full mb-3 flex justify-center">
