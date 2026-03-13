@@ -1,11 +1,8 @@
 import { useMemo, useRef } from "react";
 import { useAppSelector } from "@/store/hooks";
-import { selectGameStatus } from "@/store/selectors/gameSelectors";
+import { selectGameStatus, selectGuesses } from "@/store/selectors/gameSelectors";
 import { selectRevealedLetters } from "@/store/selectors/gridSelectors";
 import { selectCurrentPuzzle } from "@/store/selectors/puzzleSelectors";
-import type { RootState } from "@/store/index";
-
-const selectGuesses = (state: RootState) => state.game.guesses;
 
 /**
  * Returns a contextual hint string for brand-new users, cycling through four

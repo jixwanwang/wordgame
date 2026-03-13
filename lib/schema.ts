@@ -11,8 +11,7 @@ export interface Guess {
 export interface GameState {
   totalGuessesRemaining: number;
   gameStatus: "playing" | "won" | "lost";
-  guessedLetters: string[];
-  guesses: string[]; // Array of all guesses made (letters or words)
+  guesses: string[];
   currentPuzzle: string;
   difficulty: "normal" | "hard";
   currentStreak: number;
@@ -21,8 +20,7 @@ export interface GameState {
 export interface SavedGameState {
   date: string;
   guessesRemaining: number;
-  guessedLetters: string[];
-  guesses?: string[]; // Array of guess inputs (letters or words) - optional for backward compatibility
+  guesses: string[];
   isComplete: boolean;
   wonGame: boolean;
 }

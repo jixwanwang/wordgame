@@ -4,7 +4,6 @@ import type { SavedGameState, GameHistory } from "@shared/lib/schema";
 export const getDefaultGameState = (date: string): SavedGameState => ({
   date,
   guessesRemaining: NUM_GUESSES,
-  guessedLetters: [],
   guesses: [],
   isComplete: false,
   wonGame: false,
@@ -40,7 +39,6 @@ export function getGameForDay(date: string): SavedGameState {
 // Action: Add a guess for a day
 export function addGuess(
   date: string,
-  letters: string[],
   guessesRemaining: number,
   guessInput: string,
 ): void {
@@ -49,7 +47,6 @@ export function addGuess(
 
   if (existingGame) {
     // Update existing game
-    existingGame.guessedLetters = [...existingGame.guessedLetters, ...letters];
     existingGame.guessesRemaining = guessesRemaining;
     existingGame.guesses = [...(existingGame.guesses ?? []), guessInput];
   } else {
@@ -57,7 +54,6 @@ export function addGuess(
     history.games[date] = {
       date,
       guessesRemaining,
-      guessedLetters: [...letters],
       guesses: [guessInput],
       isComplete: false,
       wonGame: false,
@@ -81,7 +77,7 @@ export function completeGame(date: string, wonGame: boolean): number {
     history.games[date] = {
       date,
       guessesRemaining: 0,
-      guessedLetters: [],
+      guesses: [],
       isComplete: true,
       wonGame,
     };

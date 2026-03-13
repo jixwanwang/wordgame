@@ -75,7 +75,7 @@ export function GuessesModal({ open, onOpenChange, guesses, revealedLetters, puz
           <DialogTitle>Guesses</DialogTitle>
         </DialogHeader>
         <div className="flex flex-wrap gap-5">
-          {guessDisplays.map(({ guess, letterStates }, i) => (
+          {guessDisplays.map(({ letterStates }, i) => (
             <div key={i} className="flex flex-col items-center gap-1 shrink-0">
               <span className="text-xs text-gray-400">{i + 1}</span>
               <div className="flex gap-0.5">

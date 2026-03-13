@@ -5,18 +5,18 @@ import {
   deriveRevealedCount,
   deriveKeyboardLetterState,
 } from "@/lib/grid-helpers";
-import { selectGuessedLetters } from "./gameSelectors";
-import { selectPuzzleGrid } from "./puzzleSelectors";
+import { selectGuesses } from "./gameSelectors";
+import { selectPuzzleGrid, selectPuzzleWords } from "./puzzleSelectors";
 
 // Derived selectors using helper functions
 export const selectRevealedCells = createSelector(
-  [selectGuessedLetters, selectPuzzleGrid],
-  (guessedLetters, puzzleGrid) => deriveRevealedCells(guessedLetters, puzzleGrid),
+  [selectGuesses, selectPuzzleWords, selectPuzzleGrid],
+  (guesses, puzzleWords, puzzleGrid) => deriveRevealedCells(guesses, puzzleWords, puzzleGrid),
 );
 
 export const selectRevealedLetters = createSelector(
-  [selectGuessedLetters, selectPuzzleGrid],
-  (guessedLetters, puzzleGrid) => deriveRevealedLetters(guessedLetters, puzzleGrid),
+  [selectGuesses, selectPuzzleWords, selectPuzzleGrid],
+  (guesses, puzzleWords, puzzleGrid) => deriveRevealedLetters(guesses, puzzleWords, puzzleGrid),
 );
 
 export const selectRevealedCount = createSelector(
@@ -31,7 +31,7 @@ export const selectIsLetterRevealed = (row: number, col: number) =>
 // Helper to get keyboard letter state
 export const selectKeyboardLetterState = (letter: string) =>
   createSelector(
-    [selectGuessedLetters, selectRevealedLetters],
-    (guessedLetters, revealedLetters) =>
-      deriveKeyboardLetterState(letter, guessedLetters, revealedLetters),
+    [selectGuesses, selectRevealedLetters],
+    (guesses, revealedLetters) =>
+      deriveKeyboardLetterState(letter, guesses, revealedLetters),
   );

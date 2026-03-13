@@ -4,7 +4,7 @@ import type { RootState } from "../index";
 // Basic selectors
 export const selectGameState = (state: RootState) => state.game;
 export const selectGameStatus = (state: RootState) => state.game.gameStatus;
-export const selectGuessedLetters = (state: RootState) => state.game.guessedLetters;
+export const selectGuesses = (state: RootState) => state.game.guesses;
 export const selectTotalGuessesRemaining = (state: RootState) =>
   state.game.totalGuessesRemaining;
 export const selectCurrentStreak = (state: RootState) => state.game.currentStreak;

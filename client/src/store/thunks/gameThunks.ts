@@ -61,23 +61,10 @@ export const fetchPuzzleThunk = createAsyncThunk(
       }
 
       // Restore game state if saved state exists
-      if (savedState && savedState.guessedLetters.length > 0) {
-        // Ensure guessedLetters includes letters from valid word guesses
-        const guessedLettersSet = new Set(savedState.guessedLetters.map((l) => l.toUpperCase()));
-        if (savedState.guesses) {
-          for (const g of savedState.guesses) {
-            if (g.length > 1 && puzzle.words.includes(g.toUpperCase())) {
-              for (const ch of g.toUpperCase()) {
-                guessedLettersSet.add(ch);
-              }
-            }
-          }
-        }
-
+      if (savedState && savedState.guesses && savedState.guesses.length > 0) {
         dispatch(
           restoreGameState({
             ...savedState,
-            guessedLetters: Array.from(guessedLettersSet),
             streak: currentStreak,
           }),
         );
@@ -111,42 +98,22 @@ export const makeGuessThunk = createAsyncThunk(
       return;
     }
 
-    if (!puzzleState) {
+    if (puzzleState == null) {
       return;
     }
-
-    let newGuessedLetters: string[] = [];
 
     if (guess.type === "letter") {
       const letter = guess.value.toUpperCase();
 
       // Don't process if already guessed this letter
-      if (gameState.guessedLetters.includes(letter)) {
+      if (gameState.guesses.some((g) => g.length === 1 && g.toUpperCase() === letter)) {
         return;
       }
 
       dispatch(makeLetterGuess(letter));
-      newGuessedLetters = [letter];
     } else if (guess.type === "word") {
       const word = guess.value.toUpperCase();
-
-      // Check if word exists in the puzzle's word list
-      if (puzzleState.words.includes(word)) {
-        const wordLetters = word.split("");
-        const lettersToReveal: string[] = [];
-
-        wordLetters.forEach((letter) => {
-          if (!gameState.guessedLetters.includes(letter)) {
-            newGuessedLetters.push(letter);
-            lettersToReveal.push(letter);
-          }
-        });
-
-        dispatch(makeWordGuess({ word, letters: newGuessedLetters }));
-      } else {
-        // Word not valid, still decrement guesses
-        dispatch(makeWordGuess({ word, letters: [] }));
-      }
+      dispatch(makeWordGuess({ word }));
     }
 
     // Check win/lose conditions after state updates
@@ -171,7 +138,6 @@ export const makeGuessThunk = createAsyncThunk(
     if (puzzleState.date) {
       addGuess(
         puzzleState.date,
-        newGuessedLetters,
         updatedState.totalGuessesRemaining,
         guess.value,
       );
@@ -190,7 +156,6 @@ export const makeGuessThunk = createAsyncThunk(
             savedState: {
               date: puzzleState.date,
               guessesRemaining: updatedState.totalGuessesRemaining,
-              guessedLetters: [...updatedState.guessedLetters],
               guesses: [...updatedState.guesses],
               isComplete: true,
               wonGame,
@@ -228,7 +193,7 @@ export const submitResultThunk = createAsyncThunk(
       const state = getState() as RootState;
       const puzzleDate = state.puzzle.currentPuzzle?.date;
 
-      if (!puzzleDate) {
+      if (puzzleDate == null) {
         return;
       }
 
