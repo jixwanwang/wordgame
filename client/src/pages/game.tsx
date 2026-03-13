@@ -26,7 +26,7 @@ import { handleLoginSuccess, handleLogout } from "@/store/thunks/authThunks";
 import {
   selectGameState,
   selectGameStatus,
-  selectGuessedLetters,
+  selectGuesses,
   selectTotalGuessesRemaining,
   selectCurrentStreak,
 } from "@/store/selectors/gameSelectors";
@@ -112,7 +112,7 @@ export default function Game({ difficulty }: GameProps) {
   // Redux state
   const gameState = useAppSelector(selectGameState);
   const gameStatus = useAppSelector(selectGameStatus);
-  const guessedLetters = useAppSelector(selectGuessedLetters);
+  const guesses = useAppSelector(selectGuesses);
   const totalGuessesRemaining = useAppSelector(selectTotalGuessesRemaining);
   const currentStreak = useAppSelector(selectCurrentStreak);
   const currentPuzzle = useAppSelector(selectCurrentPuzzle);
@@ -276,14 +276,14 @@ export default function Game({ difficulty }: GameProps) {
     if (!guess) return;
 
     if (guess.length === 1) {
-      if (guessedLetters.includes(guess)) {
+      if (guesses.some((g) => g.length === 1 && g.toUpperCase() === guess)) {
         showToast(`Already guessed`);
         return;
       }
       dispatch(makeGuessThunk({ type: "letter", value: guess }));
     } else {
       // without any revealed letters, we shouldn't allow guessing any words
-      if (guessedLetters.length === 0 || revealedCount === 0) {
+      if (guesses.length === 0 || revealedCount === 0) {
         showToast("Guess a letter first!");
         return;
       }
@@ -298,7 +298,7 @@ export default function Game({ difficulty }: GameProps) {
     }
 
     setInputValue("");
-  }, [inputValue, guessedLetters, dispatch, showToast, gameStatus, revealedCount]);
+  }, [inputValue, guesses, dispatch, showToast, gameStatus, revealedCount]);
 
   const handleLetterClick = useCallback(
     (letter: string) => {
@@ -333,10 +333,10 @@ export default function Game({ difficulty }: GameProps) {
     (letter: string): "default" | "absent" | "revealed" => {
       const upperLetter = letter.toUpperCase();
       if (revealedLetters.includes(upperLetter)) return "revealed";
-      if (guessedLetters.includes(upperLetter)) return "absent";
+      if (guesses.some((g) => g.length === 1 && g.toUpperCase() === upperLetter)) return "absent";
       return "default";
     },
-    [revealedLetters, guessedLetters],
+    [revealedLetters, guesses],
   );
 
   // Handle keyboard input

@@ -5,7 +5,6 @@ import { NUM_GUESSES } from "@shared/lib/game-utils";
 const initialState: GameState = {
   totalGuessesRemaining: NUM_GUESSES,
   gameStatus: "playing",
-  guessedLetters: [],
   guesses: [],
   currentPuzzle: "",
   difficulty: "normal",
@@ -18,19 +17,13 @@ const gameSlice = createSlice({
   reducers: {
     makeLetterGuess: (state, action: PayloadAction<string>) => {
       const letter = action.payload.toUpperCase();
-      if (!state.guessedLetters.includes(letter)) {
-        state.guessedLetters.push(letter);
+      if (!state.guesses.some((g) => g.length === 1 && g.toUpperCase() === letter)) {
         state.guesses.push(letter);
         state.totalGuessesRemaining -= 1;
       }
     },
-    makeWordGuess: (state, action: PayloadAction<{ word: string; letters: string[] }>) => {
-      const { word, letters } = action.payload;
-      letters.forEach((letter) => {
-        if (!state.guessedLetters.includes(letter)) {
-          state.guessedLetters.push(letter);
-        }
-      });
+    makeWordGuess: (state, action: PayloadAction<{ word: string }>) => {
+      const { word } = action.payload;
       state.guesses.push(word);
       state.totalGuessesRemaining -= 1;
     },
@@ -41,9 +34,8 @@ const gameSlice = createSlice({
       state.currentStreak = action.payload;
     },
     restoreGameState: (state, action: PayloadAction<SavedGameState & { streak: number }>) => {
-      const { guessesRemaining, guessedLetters, guesses, isComplete, wonGame, streak } = action.payload;
+      const { guessesRemaining, guesses, isComplete, wonGame, streak } = action.payload;
       state.totalGuessesRemaining = guessesRemaining;
-      state.guessedLetters = guessedLetters;
       state.guesses = guesses || [];
       state.gameStatus = isComplete ? (wonGame ? "won" : "lost") : "playing";
       state.currentStreak = streak;
@@ -57,7 +49,6 @@ const gameSlice = createSlice({
     resetGameToInitial: (state) => {
       state.totalGuessesRemaining = NUM_GUESSES;
       state.gameStatus = "playing";
-      state.guessedLetters = [];
       state.guesses = [];
       state.currentStreak = 0;
     },

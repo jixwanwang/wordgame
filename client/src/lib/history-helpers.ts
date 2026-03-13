@@ -1,11 +1,12 @@
 import { Grid8x8 } from "@shared/lib/grid";
 import type { Puzzle } from "@shared/lib/puzzles";
+import { extractRevealedLettersFromGuesses } from "./grid-helpers";
 
-export function calculateScore(puzzle: Puzzle, guessedLetters: string[]): { revealed: number; total: number } {
+export function calculateScore(puzzle: Puzzle, guesses: string[]): { revealed: number; total: number } {
   const grid = new Grid8x8();
   grid.loadPuzzle(puzzle);
 
-  const guessedSet = new Set(guessedLetters.map((l) => l.toUpperCase()));
+  const revealedSet = extractRevealedLettersFromGuesses(guesses, puzzle.words);
   let revealed = 0;
   let total = 0;
 
@@ -14,7 +15,7 @@ export function calculateScore(puzzle: Puzzle, guessedLetters: string[]): { reve
       const letter = grid.getCell(row, col);
       if (letter && letter !== " ") {
         total++;
-        if (guessedSet.has(letter.toUpperCase())) {
+        if (revealedSet.has(letter.toUpperCase())) {
           revealed++;
         }
       }
