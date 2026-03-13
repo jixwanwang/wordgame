@@ -62,9 +62,22 @@ export const fetchPuzzleThunk = createAsyncThunk(
 
       // Restore game state if saved state exists
       if (savedState && savedState.guessedLetters.length > 0) {
+        // Ensure guessedLetters includes letters from valid word guesses
+        const guessedLettersSet = new Set(savedState.guessedLetters.map((l) => l.toUpperCase()));
+        if (savedState.guesses) {
+          for (const g of savedState.guesses) {
+            if (g.length > 1 && puzzle.words.includes(g.toUpperCase())) {
+              for (const ch of g.toUpperCase()) {
+                guessedLettersSet.add(ch);
+              }
+            }
+          }
+        }
+
         dispatch(
           restoreGameState({
             ...savedState,
+            guessedLetters: Array.from(guessedLettersSet),
             streak: currentStreak,
           }),
         );
