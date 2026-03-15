@@ -32,6 +32,7 @@ All components live in `client/src/components/`.
 | `AuthModal` | Login and registration modal (auto-prompts 3s after completing today's puzzle for unauthenticated users with local history; never auto-prompts for past puzzles) |
 | `StatsModal` | User statistics summary |
 | `HistoryModal` | Browse past puzzles; shows score for completed dates and a "Play [date]" button for unplayed past dates |
+| `FeedbackModal` | Submit feedback with a type dropdown ("Missing word", "Word should be removed", "Other") and a 280-character text input; prepends the selected type to the text before sending to the server |
 | `GameOverModal` | Win/loss screen shown when the game ends |
 
 ## New-User Hint System

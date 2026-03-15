@@ -84,6 +84,11 @@ export interface Database {
     currentStreak: number,
     lastCompletedDate: string,
   ): Promise<void>;
+
+  /**
+   * Save user feedback
+   */
+  saveFeedback(username: string, feedback: string): Promise<void>;
 }
 
 /**
@@ -190,5 +195,9 @@ export class StubDatabase implements Database {
       lastCompletedDate,
       updatedAt: new Date(),
     });
+  }
+
+  async saveFeedback(_username: string, _feedback: string): Promise<void> {
+    // Stub: no-op
   }
 }

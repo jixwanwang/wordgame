@@ -204,6 +204,19 @@ The server validates that the requested date is not in the future before returni
 
 ---
 
+## Feedback
+
+Authenticated users can submit feedback via the user dropdown menu (last item before "Logout"). The feedback modal (`client/src/components/feedback-modal.tsx`) provides:
+
+- A **type dropdown** with three options: "Missing word", "Word should be removed", "Other"
+- A **text input** (textarea) with a 280-character limit
+
+On submission, the selected type is prepended to the text as a prefix (e.g. `"MISSING WORD: the actual feedback text"`) and sent to `POST /api/feedback`. The server stores the combined string in the `feedback` table. Feedback is write-only — there is no endpoint to read feedback.
+
+Only logged-in users can submit feedback. The server validates that the feedback is non-empty and does not exceed 500 characters (the client enforces the 280-character limit, but the server allows up to 500 to accommodate the type prefix).
+
+---
+
 ## Key Files
 
 | Area | File | Notable Lines |

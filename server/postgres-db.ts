@@ -6,7 +6,7 @@ import pkg from "pg";
 const { Pool } = pkg;
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcrypt";
-import { users, results, userStats } from "./schema.js";
+import { users, results, userStats, feedback } from "./schema.js";
 import type { Database, PuzzleResult, UserStats } from "./db.js";
 
 const SALT_ROUNDS = 10;
@@ -223,6 +223,14 @@ export class PostgresDatabase implements Database {
           updatedAt: new Date(),
         },
       });
+  }
+
+  async saveFeedback(username: string, feedbackText: string): Promise<void> {
+    const lowerUsername = username.toLowerCase();
+    await this.db.insert(feedback).values({
+      username: lowerUsername,
+      feedback: feedbackText,
+    });
   }
 
   /**
