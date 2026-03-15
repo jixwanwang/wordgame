@@ -3,20 +3,44 @@
  * These are pure functions with no side effects
  */
 
+/**
+ * Extract the set of revealed letters from guesses.
+ * Single-letter guesses always reveal that letter.
+ * Multi-letter (word) guesses only reveal their letters if the word is in puzzleWords.
+ */
+export function extractRevealedLettersFromGuesses(
+  guesses: string[],
+  puzzleWords: string[],
+): Set<string> {
+  const letters = new Set<string>();
+  const upperWords = new Set(puzzleWords.map((w) => w.toUpperCase()));
+  for (const g of guesses) {
+    if (g.length === 1) {
+      letters.add(g.toUpperCase());
+    } else if (upperWords.has(g.toUpperCase())) {
+      for (const ch of g.toUpperCase()) {
+        letters.add(ch);
+      }
+    }
+  }
+  return letters;
+}
 
 /**
- * Derive which cells are revealed based on guessed letters and puzzle grid
+ * Derive which cells are revealed based on guesses, puzzle words, and puzzle grid
  */
 export function deriveRevealedCells(
-  guessedLetters: string[],
+  guesses: string[],
+  puzzleWords: string[],
   puzzleGrid: string[][],
 ): boolean[][] {
   const revealed: boolean[][] = Array(8)
     .fill(null)
     .map(() => Array(8).fill(false));
 
-  guessedLetters.forEach((letter) => {
-    const upperLetter = letter.toUpperCase();
+  const letters = extractRevealedLettersFromGuesses(guesses, puzzleWords);
+
+  letters.forEach((upperLetter) => {
     for (let row = 0; row < 8; row++) {
       for (let col = 0; col < 8; col++) {
         if (puzzleGrid[row][col].toUpperCase() === upperLetter) {
@@ -33,19 +57,19 @@ export function deriveRevealedCells(
  * Derive which letters are revealed (found in the puzzle)
  */
 export function deriveRevealedLetters(
-  guessedLetters: string[],
+  guesses: string[],
+  puzzleWords: string[],
   puzzleGrid: string[][],
 ): string[] {
+  const letters = extractRevealedLettersFromGuesses(guesses, puzzleWords);
   const revealedSet = new Set<string>();
 
-  guessedLetters.forEach((letter) => {
-    const upperLetter = letter.toUpperCase();
-    // Check if this letter exists in the grid
+  letters.forEach((upperLetter) => {
     for (let row = 0; row < 8; row++) {
       for (let col = 0; col < 8; col++) {
         if (puzzleGrid[row][col].toUpperCase() === upperLetter) {
           revealedSet.add(upperLetter);
-          break; // Found at least one, no need to continue
+          break;
         }
       }
       if (revealedSet.has(upperLetter)) break;
@@ -73,7 +97,7 @@ export function deriveRevealedCount(revealedCells: boolean[][]): number {
  */
 export function deriveKeyboardLetterState(
   letter: string,
-  guessedLetters: string[],
+  guesses: string[],
   revealedLetters: string[],
 ): "default" | "absent" | "revealed" {
   const upperLetter = letter.toUpperCase();
@@ -82,8 +106,9 @@ export function deriveKeyboardLetterState(
     return "revealed"; // Green - in puzzle
   }
 
-  if (guessedLetters.includes(upperLetter)) {
-    return "absent"; // Gray - guessed but not in puzzle
+  // A letter is "absent" if it was guessed as a single letter but not in the puzzle
+  if (guesses.some((g) => g.length === 1 && g.toUpperCase() === upperLetter)) {
+    return "absent";
   }
 
   return "default"; // Not guessed yet

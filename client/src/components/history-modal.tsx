@@ -8,6 +8,7 @@ import { calculateRevealedLetterCount, NUM_GUESSES } from "@shared/lib/game-util
 import { Grid8x8 } from "@shared/lib/grid";
 import { getTodayInPacificTime } from "../../../server/time-utils";
 import { cn } from "@/lib/utils";
+import { extractRevealedLettersFromGuesses } from "@/lib/grid-helpers";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchHistoryEntryThunk } from "@/store/thunks/historyThunks";
 
@@ -135,11 +136,11 @@ export function HistoryModalInner({ open, onOpenChange, onPlayDate }: HistoryMod
     return g;
   }, [puzzleData?.puzzle]);
 
-  // Compute revealed letters set
+  // Compute revealed letters set from guesses
   const revealedLettersSet = useMemo(() => {
-    if (!puzzleData?.savedState?.guessedLetters) return new Set<string>();
-    return new Set(puzzleData.savedState.guessedLetters.map((l) => l.toUpperCase()));
-  }, [puzzleData?.savedState?.guessedLetters]);
+    if (!puzzleData?.savedState?.guesses || !puzzleData?.puzzle) return new Set<string>();
+    return extractRevealedLettersFromGuesses(puzzleData.savedState.guesses, puzzleData.puzzle.words);
+  }, [puzzleData?.savedState?.guesses, puzzleData?.puzzle]);
 
   // isLetterRevealed function for CrosswordGrid
   const isLetterRevealed = useCallback(
@@ -169,15 +170,15 @@ export function HistoryModalInner({ open, onOpenChange, onPlayDate }: HistoryMod
 
   const hasCompleted = currentEntry?.status?.isComplete === true;
   const wonGame = currentEntry?.status?.wonGame === true;
-  const hasPlayed = (puzzleData?.savedState?.guessedLetters?.length ?? 0) > 0;
+  const hasPlayed = (puzzleData?.savedState?.guesses?.length ?? 0) > 0;
   const gameStatus = hasCompleted ? (wonGame ? "won" : "lost") : "playing";
 
   const lettersRevealed = useMemo(() => {
-    if (!puzzleData?.puzzle || !puzzleData?.savedState?.guessedLetters) return 0;
-    return calculateRevealedLetterCount(
-      puzzleData.puzzle.words,
-      puzzleData.savedState.guessedLetters,
+    if (!puzzleData?.puzzle || !puzzleData?.savedState?.guesses) return 0;
+    const revealedLetters = Array.from(
+      extractRevealedLettersFromGuesses(puzzleData.savedState.guesses, puzzleData.puzzle.words),
     );
+    return calculateRevealedLetterCount(puzzleData.puzzle.words, revealedLetters);
   }, [puzzleData]);
 
   const totalWordLetters = useMemo(() => {

@@ -36,25 +36,14 @@ export const fetchHistoryEntryThunk = createAsyncThunk(
         wordPositions: response.wordPositions,
       };
       const localSavedState = getGameForDay(date);
-      let savedState =
+      const savedState =
         response.savedState ??
-        (localSavedState.guessedLetters.length > 0 ? localSavedState : undefined);
-      if (savedState && savedState.guessedLetters) {
-        const merged = [...savedState.guessedLetters];
-        savedState.guesses?.forEach((guess) => {
-          guess.split("").forEach((letter) => {
-            if (!merged.includes(letter)) {
-              merged.push(letter);
-            }
-          });
-        });
-        savedState = { ...savedState, guessedLetters: merged };
-      }
+        ((localSavedState.guesses?.length ?? 0) > 0 ? localSavedState : undefined);
 
       const isComplete = savedState?.isComplete === true;
       const wonGame = savedState?.wonGame === true;
-      const score = savedState?.guessedLetters
-        ? calculateScore(puzzle, savedState.guessedLetters)
+      const score = savedState?.guesses
+        ? calculateScore(puzzle, savedState.guesses)
         : null;
 
       dispatch(

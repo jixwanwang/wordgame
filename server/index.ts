@@ -372,13 +372,9 @@ export function createApp(db: Database) {
         const userResult = await db.getPuzzleResult(req.user.username, puzzleDate);
         if (userResult) {
           // Convert PuzzleResult to SavedGameState format
-          // Extract guessed letters (single character guesses)
-          const guessedLetters = userResult.guesses.filter((g) => g.length === 1);
-
           response.savedState = {
             date: userResult.date,
             guessesRemaining: NUM_GUESSES - userResult.numGuesses,
-            guessedLetters: guessedLetters,
             guesses: userResult.guesses,
             isComplete: true, // If result exists, game is complete
             wonGame: userResult.won,

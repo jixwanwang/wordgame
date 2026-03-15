@@ -39,7 +39,7 @@ Players have **15 guesses** (`NUM_GUESSES = 15`, `lib/game-utils.ts:4`). There a
 Either type costs exactly 1 guess regardless of result.
 
 **Word guess behavior** (`client/src/store/thunks/gameThunks.ts:100–218`):
-- If the word is in the puzzle's word list: all new letters in that word are added to `guessedLetters` and revealed in the grid.
+- If the word is in the puzzle's word list: all its constituent letters are revealed in the grid.
 - If the word is not in the puzzle: the guess is still consumed. No letters are revealed.
 
 A letter already guessed can be skipped — if a player submits a letter they already guessed, it does not consume a guess.
@@ -151,7 +151,6 @@ SavedGameState {
   date: string                // MM-DD-YYYY
   guessesRemaining: number    // remaining out of 15
   guesses: string[]           // all guess inputs in order
-  guessedLetters: string[]    // unique letters guessed (uppercase)
   isComplete: boolean
   wonGame: boolean
 }
