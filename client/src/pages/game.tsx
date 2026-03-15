@@ -418,7 +418,7 @@ export default function Game({ difficulty }: GameProps) {
           <div className="flex items-center gap-2">
             {Auth.isAuthenticated() && (
               <div className="flex items-center gap-2 ml-2">
-                <span className="text-sm text-gray-600">{Auth.getUsername()}</span>
+                <span className="text-xs sm:text-sm text-gray-600">{Auth.getUsername()}</span>
               </div>
             )}
             {Auth.isAuthenticated() ? (
@@ -567,7 +567,7 @@ export default function Game({ difficulty }: GameProps) {
                 </div>
               </div>
             ) : (
-              <div className="w-full mb-3 flex justify-center">
+              <div className="w-full mb-3 mt-4 flex justify-center">
                 <div className="flex border-b border-gray-200">
                   {(["results", "guesses"] as const).map((tab) => (
                     <button
