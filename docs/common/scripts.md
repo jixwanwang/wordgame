@@ -27,7 +27,8 @@
 | Script | Purpose |
 |---|---|
 | `build.sh` | Build client and server |
-| `deploy.sh` | Full deployment pipeline (build, upload, restart) |
+| `deploy-full.sh` | One-command deployment: builds, uploads, runs VM-side deploy, and health checks |
+| `deploy.sh` | Build and upload code to VM (does not restart the app) |
 | `deploy-on-vm.sh` | Steps that run on the VM side during deployment |
 
 ### Infrastructure Setup (run once)
