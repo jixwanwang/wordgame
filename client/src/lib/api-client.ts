@@ -232,6 +232,14 @@ export const API = {
     }
   },
 
+  // Submit feedback (requires auth)
+  async submitFeedback(feedback: string): Promise<{ success: boolean; message?: string }> {
+    return apiRequest<{ success: boolean; message?: string }>("/api/feedback", {
+      method: "POST",
+      body: JSON.stringify({ feedback }),
+    });
+  },
+
   // Refresh the auth token
   async refreshToken(): Promise<boolean> {
     try {

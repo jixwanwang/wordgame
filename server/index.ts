@@ -583,6 +583,56 @@ export function createApp(db: Database) {
     return res.json({ valid: true });
   });
 
+  /**
+   * POST /api/feedback
+   * Submit user feedback (requires authentication)
+   * Request headers: Authorization: Bearer <token>
+   * Request body: { feedback: string }
+   * Response: { success: boolean, message?: string }
+   */
+  app.post("/api/feedback", authenticateToken, async (req: Request, res: Response) => {
+    const username = req.user?.username;
+
+    if (username == null) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    const rawFeedback = req.body.feedback;
+
+    if (rawFeedback == null || typeof rawFeedback !== "string" || rawFeedback.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Feedback text is required",
+      });
+    }
+
+    const feedback = rawFeedback.trim();
+
+    if (feedback.length > 500) {
+      return res.status(400).json({
+        success: false,
+        message: "Feedback must be 500 characters or less",
+      });
+    }
+
+    try {
+      await db.saveFeedback(username, feedback);
+      return res.json({
+        success: true,
+        message: "Feedback submitted successfully",
+      });
+    } catch (error) {
+      console.error("Error saving feedback:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to submit feedback",
+      });
+    }
+  });
+
   // Health check endpoint
   app.get("/health", (_req: Request, res: Response) => {
     res.json({ status: "ok" });

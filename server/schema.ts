@@ -1,4 +1,4 @@
-import { pgTable, varchar, text, timestamp, boolean, integer, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, varchar, text, timestamp, boolean, integer, primaryKey, serial } from "drizzle-orm/pg-core";
 
 /**
  * Users table
@@ -62,9 +62,24 @@ export const userStats = pgTable("user_stats", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+/**
+ * Feedback table
+ * Stores user-submitted feedback
+ */
+export const feedback = pgTable("feedback", {
+  id: serial("id").primaryKey(),
+  username: varchar("username", { length: 50 })
+    .notNull()
+    .references(() => users.username, { onDelete: "cascade" }),
+  feedback: text("feedback").notNull(),
+  submittedAt: timestamp("submitted_at").notNull().defaultNow(),
+});
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Result = typeof results.$inferSelect;
 export type NewResult = typeof results.$inferInsert;
 export type UserStats = typeof userStats.$inferSelect;
 export type NewUserStats = typeof userStats.$inferInsert;
+export type Feedback = typeof feedback.$inferSelect;
+export type NewFeedback = typeof feedback.$inferInsert;

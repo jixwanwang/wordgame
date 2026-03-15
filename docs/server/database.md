@@ -50,6 +50,14 @@ Primary key is `(username, date)` — one result per user per puzzle date.
 
 Note: streak is also computable from `results` records directly. `userStats` serves as a cached value updated on each submission.
 
+### `feedback`
+| Column | Type | Notes |
+|---|---|---|
+| `id` | serial | Primary key (auto-increment) |
+| `username` | varchar(50) | FK → users.username, cascade delete |
+| `feedback` | text | Feedback text, prefixed with type (e.g. "MISSING WORD: ...") |
+| `submittedAt` | timestamp | Set at insert |
+
 ## Drizzle ORM
 
 Queries use the Drizzle query builder with `eq()` and `and()` operators. There is no raw SQL in the application code.

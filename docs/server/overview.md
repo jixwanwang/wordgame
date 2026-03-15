@@ -34,6 +34,7 @@ Applied globally in `index.ts`:
 | `GET` | `/api/history` | Required | Fetch all of the user's past results |
 | `POST` | `/api/refresh-token` | Required | Issue a new JWT |
 | `GET` | `/api/auth/validate` | Required | Check whether the current token is valid |
+| `POST` | `/api/feedback` | Required | Submit user feedback (text blob) |
 | `GET` | `/health` | None | Health check; returns 200 |
 
 ## Puzzle Serving

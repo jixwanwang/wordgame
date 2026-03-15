@@ -7,8 +7,9 @@ import { GameOverStats } from "@/components/game-over-stats";
 import { AuthModal } from "@/components/auth-modal";
 import { StatsModal } from "@/components/stats-modal";
 import { HistoryModal } from "@/components/history-modal";
+import { FeedbackModal } from "@/components/feedback-modal";
 import { SquareInput } from "@/components/square-input";
-import { CircleUserRound, UserRound, ChartColumnBig, LogOut, Calendar } from "lucide-react";
+import { CircleUserRound, UserRound, ChartColumnBig, LogOut, Calendar, MessageSquareWarning } from "lucide-react";
 import { getGameNumber, NUM_GUESSES, calculateRevealedLetterCount } from "@shared/lib/game-utils";
 import {
   DropdownMenu,
@@ -166,6 +167,7 @@ export default function Game({ difficulty }: GameProps) {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [hasAutoPromptedAuth, setHasAutoPromptedAuth] = useState(false);
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -439,6 +441,10 @@ export default function Game({ difficulty }: GameProps) {
                     <Calendar className="w-4 h-4 mr-2" />
                     History
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowFeedbackModal(true)}>
+                    <MessageSquareWarning className="w-4 h-4 mr-2" />
+                    Feedback
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {
                       dispatch(handleLogout());
@@ -486,6 +492,9 @@ export default function Game({ difficulty }: GameProps) {
 
       {/* Stats Modal */}
       <StatsModal open={showStatsModal} onOpenChange={setShowStatsModal} />
+
+      {/* Feedback Modal */}
+      <FeedbackModal open={showFeedbackModal} onOpenChange={setShowFeedbackModal} />
 
       {/* History Modal */}
       <HistoryModal

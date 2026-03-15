@@ -54,6 +54,7 @@ Methods:
 - `getPuzzle(date?, difficulty?)`
 - `submitResult(result)`
 - `getHistory()`
+- `submitFeedback(feedback)` — sends feedback text to `POST /api/feedback`
 - `checkAuthToken()`
 - `refreshToken()`
 

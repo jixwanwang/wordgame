@@ -102,11 +102,22 @@ class MockDatabase implements Database {
     });
   }
 
+  private feedbacks: { username: string; feedback: string }[] = [];
+
+  async saveFeedback(username: string, feedback: string): Promise<void> {
+    this.feedbacks.push({ username: username.toLowerCase(), feedback });
+  }
+
+  getFeedbacks() {
+    return this.feedbacks;
+  }
+
   // Test helper methods
   reset() {
     this.users.clear();
     this.results.clear();
     this.userStats.clear();
+    this.feedbacks = [];
   }
 }
 
@@ -730,6 +741,112 @@ describe('API Endpoints', () => {
 
       assert.strictEqual(response.body.success, false);
       assert.ok(response.body.message.includes('required'));
+    });
+  });
+
+  describe('POST /api/feedback', () => {
+    test('should submit feedback when authenticated', async () => {
+      const db = new MockDatabase();
+      await db.createUser('user123', 'password123');
+      const app = createApp(db);
+      const token = generateAuthToken('user123');
+
+      const response = await request(app)
+        .post('/api/feedback')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ feedback: 'MISSING WORD: example' })
+        .expect(200)
+        .expect('Content-Type', /json/);
+
+      assert.strictEqual(response.body.success, true);
+      assert.strictEqual(response.body.message, 'Feedback submitted successfully');
+
+      const feedbacks = db.getFeedbacks();
+      assert.strictEqual(feedbacks.length, 1);
+      assert.strictEqual(feedbacks[0].feedback, 'MISSING WORD: example');
+      assert.strictEqual(feedbacks[0].username, 'user123');
+    });
+
+    test('should fail when not authenticated', async () => {
+      const db = new MockDatabase();
+      const app = createApp(db);
+
+      const response = await request(app)
+        .post('/api/feedback')
+        .send({ feedback: 'some feedback' })
+        .expect(401)
+        .expect('Content-Type', /json/);
+
+      assert.strictEqual(response.body.success, false);
+    });
+
+    test('should fail when feedback is empty', async () => {
+      const db = new MockDatabase();
+      await db.createUser('user123', 'password123');
+      const app = createApp(db);
+      const token = generateAuthToken('user123');
+
+      const response = await request(app)
+        .post('/api/feedback')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ feedback: '' })
+        .expect(400)
+        .expect('Content-Type', /json/);
+
+      assert.strictEqual(response.body.success, false);
+      assert.strictEqual(response.body.message, 'Feedback text is required');
+    });
+
+    test('should fail when feedback is missing', async () => {
+      const db = new MockDatabase();
+      await db.createUser('user123', 'password123');
+      const app = createApp(db);
+      const token = generateAuthToken('user123');
+
+      const response = await request(app)
+        .post('/api/feedback')
+        .set('Authorization', `Bearer ${token}`)
+        .send({})
+        .expect(400)
+        .expect('Content-Type', /json/);
+
+      assert.strictEqual(response.body.success, false);
+      assert.strictEqual(response.body.message, 'Feedback text is required');
+    });
+
+    test('should fail when feedback exceeds 500 characters', async () => {
+      const db = new MockDatabase();
+      await db.createUser('user123', 'password123');
+      const app = createApp(db);
+      const token = generateAuthToken('user123');
+
+      const response = await request(app)
+        .post('/api/feedback')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ feedback: 'a'.repeat(501) })
+        .expect(400)
+        .expect('Content-Type', /json/);
+
+      assert.strictEqual(response.body.success, false);
+      assert.strictEqual(response.body.message, 'Feedback must be 500 characters or less');
+    });
+
+    test('should trim whitespace from feedback', async () => {
+      const db = new MockDatabase();
+      await db.createUser('user123', 'password123');
+      const app = createApp(db);
+      const token = generateAuthToken('user123');
+
+      const response = await request(app)
+        .post('/api/feedback')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ feedback: '  some feedback  ' })
+        .expect(200)
+        .expect('Content-Type', /json/);
+
+      assert.strictEqual(response.body.success, true);
+      const feedbacks = db.getFeedbacks();
+      assert.strictEqual(feedbacks[0].feedback, 'some feedback');
     });
   });
 
