@@ -600,14 +600,16 @@ export function createApp(db: Database) {
       });
     }
 
-    const { feedback } = req.body;
+    const rawFeedback = req.body.feedback;
 
-    if (feedback == null || typeof feedback !== "string" || feedback.trim().length === 0) {
+    if (rawFeedback == null || typeof rawFeedback !== "string" || rawFeedback.trim().length === 0) {
       return res.status(400).json({
         success: false,
         message: "Feedback text is required",
       });
     }
+
+    const feedback = rawFeedback.trim();
 
     if (feedback.length > 500) {
       return res.status(400).json({
@@ -617,7 +619,7 @@ export function createApp(db: Database) {
     }
 
     try {
-      await db.saveFeedback(username, feedback.trim());
+      await db.saveFeedback(username, feedback);
       return res.json({
         success: true,
         message: "Feedback submitted successfully",
