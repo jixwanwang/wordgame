@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { API } from "@/lib/api-client";
 
 const FEEDBACK_TYPES = ["Missing word", "Word should be removed", "Other"] as const;
@@ -86,20 +87,18 @@ export function FeedbackModal({ open, onOpenChange }: FeedbackModalProps) {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <select
-                id="feedback-type"
-                value={feedbackType}
-                onChange={(e) => setFeedbackType(e.target.value as FeedbackType)}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
-              >
+            <Select value={feedbackType} onValueChange={(v) => setFeedbackType(v as FeedbackType)}>
+              <SelectTrigger className="border-gray-300 text-sm focus:ring-gray-400 rounded-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white rounded-sm">
                 {FEEDBACK_TYPES.map((type) => (
-                  <option key={type} value={type}>
+                  <SelectItem key={type} value={type}>
                     {type}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-            </div>
+              </SelectContent>
+            </Select>
 
             <div className="flex flex-col gap-1.5">
               <textarea
@@ -113,7 +112,7 @@ export function FeedbackModal({ open, onOpenChange }: FeedbackModalProps) {
                 maxLength={MAX_LENGTH}
                 rows={4}
                 placeholder="Tell us more..."
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"
+                className="border border-gray-300 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"
               />
               <div className="text-xs text-gray-400 text-right">
                 {feedbackText.length}/{MAX_LENGTH}
@@ -125,7 +124,7 @@ export function FeedbackModal({ open, onOpenChange }: FeedbackModalProps) {
             <button
               onClick={handleSubmit}
               disabled={submitting || feedbackText.trim().length === 0}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-full text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? "Submitting..." : "Submit"}
             </button>

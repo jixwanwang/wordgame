@@ -405,13 +405,13 @@ export default function Game({ difficulty }: GameProps) {
                 className="flex items-end gap-1 hover:opacity-70 transition-opacity"
                 aria-label="Go to today's puzzle"
               >
-                <h1 className="text-2xl sm:text-3xl font-bold text-dark">Crosses</h1>
-                <h2 className="pb-1">#{puzzleNumber}</h2>
+                <h1 className="text-2xl sm:text-3xl font-bold text-dark font-title">Crosses</h1>
+                <h2 className="pb-0.5">#{puzzleNumber}</h2>
               </button>
             ) : (
               <div className="flex items-end gap-1">
-                <h1 className="text-2xl sm:text-3xl font-bold text-dark">Crosses</h1>
-                <h2 className="pb-1">#{puzzleNumber}</h2>
+                <h1 className="text-2xl sm:text-3xl font-bold text-dark font-title">Crosses</h1>
+                <h2 className="pb-0.5">#{puzzleNumber}</h2>
               </div>
             )}
           </div>
