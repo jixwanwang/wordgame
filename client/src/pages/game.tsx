@@ -405,20 +405,20 @@ export default function Game({ difficulty }: GameProps) {
                 className="flex items-end gap-1 hover:opacity-70 transition-opacity"
                 aria-label="Go to today's puzzle"
               >
-                <h1 className="text-2xl sm:text-3xl font-bold text-dark">Crosses</h1>
-                <h2 className="pb-1">#{puzzleNumber}</h2>
+                <h1 className="text-2xl sm:text-3xl font-bold text-dark font-title">Crosses</h1>
+                <h2 className="pb-0.5">#{puzzleNumber}</h2>
               </button>
             ) : (
               <div className="flex items-end gap-1">
-                <h1 className="text-2xl sm:text-3xl font-bold text-dark">Crosses</h1>
-                <h2 className="pb-1">#{puzzleNumber}</h2>
+                <h1 className="text-2xl sm:text-3xl font-bold text-dark font-title">Crosses</h1>
+                <h2 className="pb-0.5">#{puzzleNumber}</h2>
               </div>
             )}
           </div>
           <div className="flex items-center gap-2">
             {Auth.isAuthenticated() && (
               <div className="flex items-center gap-2 ml-2">
-                <span className="text-sm text-gray-600">{Auth.getUsername()}</span>
+                <span className="text-xs sm:text-sm text-gray-600">{Auth.getUsername()}</span>
               </div>
             )}
             {Auth.isAuthenticated() ? (
@@ -434,15 +434,15 @@ export default function Game({ difficulty }: GameProps) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handleFetchHistory}>
-                    <ChartColumnBig className="w-4 h-4 mr-2" />
+                    <ChartColumnBig className="w-4 h-4" />
                     Stats
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setShowHistoryModal(true)}>
-                    <Calendar className="w-4 h-4 mr-2" />
+                    <Calendar className="w-4 h-4" />
                     History
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setShowFeedbackModal(true)}>
-                    <MessageSquareWarning className="w-4 h-4 mr-2" />
+                    <MessageSquareWarning className="w-4 h-4" />
                     Feedback
                   </DropdownMenuItem>
                   <DropdownMenuItem
@@ -450,7 +450,7 @@ export default function Game({ difficulty }: GameProps) {
                       dispatch(handleLogout());
                     }}
                   >
-                    <LogOut className="w-4 h-4 mr-2" />
+                    <LogOut className="w-4 h-4" />
                     Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -567,7 +567,7 @@ export default function Game({ difficulty }: GameProps) {
                 </div>
               </div>
             ) : (
-              <div className="w-full mb-3 flex justify-center">
+              <div className="w-full mb-3 mt-4 flex justify-center">
                 <div className="flex border-b border-gray-200">
                   {(["results", "guesses"] as const).map((tab) => (
                     <button

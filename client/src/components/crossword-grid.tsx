@@ -303,7 +303,7 @@ export function CrosswordGrid({
       <div
         key={key}
         className={cn(
-          "w-8 h-8 sm:w-10 sm:h-10 border-2 flex items-center justify-center text-sm sm:text-lg font-bold crossword-cell relative group",
+          "w-8 h-8 sm:w-10 sm:h-10 border-2 flex items-center justify-center text-md sm:text-lg font-bold crossword-cell relative group",
           shouldShowLetter
             ? isAutoRevealed
               ? "text-orange-700"
@@ -316,11 +316,16 @@ export function CrosswordGrid({
         data-revealed={cellRevealed}
         data-show={shouldShowLetter}
       >
-        <FlipLetter
-          letter={letter}
-          shouldShowLetter={shouldShowLetter}
-          animateKey={key}
-        />
+        <div className={cn(
+          "transition-opacity duration-200",
+          shouldShowLetter && cellArrowsData.length > 0 && "group-hover:opacity-20",
+        )}>
+          <FlipLetter
+            letter={letter}
+            shouldShowLetter={shouldShowLetter}
+            animateKey={key}
+          />
+        </div>
         {renderArrows()}
       </div>
     );
