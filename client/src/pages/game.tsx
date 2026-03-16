@@ -434,15 +434,15 @@ export default function Game({ difficulty }: GameProps) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handleFetchHistory}>
-                    <ChartColumnBig className="w-4 h-4 mr-2" />
+                    <ChartColumnBig className="w-4 h-4" />
                     Stats
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setShowHistoryModal(true)}>
-                    <Calendar className="w-4 h-4 mr-2" />
+                    <Calendar className="w-4 h-4" />
                     History
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setShowFeedbackModal(true)}>
-                    <MessageSquareWarning className="w-4 h-4 mr-2" />
+                    <MessageSquareWarning className="w-4 h-4" />
                     Feedback
                   </DropdownMenuItem>
                   <DropdownMenuItem
@@ -450,7 +450,7 @@ export default function Game({ difficulty }: GameProps) {
                       dispatch(handleLogout());
                     }}
                   >
-                    <LogOut className="w-4 h-4 mr-2" />
+                    <LogOut className="w-4 h-4" />
                     Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>
