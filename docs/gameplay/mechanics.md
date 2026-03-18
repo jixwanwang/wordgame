@@ -217,6 +217,49 @@ Only logged-in users can submit feedback. The server validates that the feedback
 
 ---
 
+## Puzzle Generation
+
+Puzzles are generated offline using `gen_puzzle.ts` and written to static TypeScript data files. There is no runtime puzzle generation.
+
+### Running the Generator
+
+```
+npx tsx gen_puzzle.ts [count]
+```
+
+Generates `count` puzzles (default 90) starting 3 days from today, writing them to `lib/puzzles_normal.ts`.
+
+### Generation Process (`gen_puzzle.ts`)
+
+1. **Word selection** — For each puzzle, random words are drawn from the dictionary (`lib/dictionary.ts`) based on difficulty:
+   - **Practice**: 1×5-letter + 1×4-letter (2 words)
+   - **Normal** (alternates by seed): 4×5-letter, or 1×7 + 2×5 + 1×3, or 1×6 + 2×5 + 1×4
+   - **Hard**: 1×7 + 2×6 + 1×5
+
+2. **Duplicate prevention** — If the same word is selected more than once, the word set is discarded and redrawn.
+
+3. **Validation filters** — Before grid placement, the word set must pass:
+   - At least 3 unique letters across all words (overlap requirement)
+   - At most 14 unique letters (keeps difficulty manageable)
+   - At least one vowel must be hidden (not all vowels used)
+   - Minimum Scrabble-value score based on unique letter count
+
+4. **Grid placement** — The first word is placed randomly (horizontal or vertical). Subsequent words are placed using `placeWord()`, which finds valid overlapping positions with existing letters. Supports horizontal, vertical, and diagonal directions.
+
+5. **Puzzle validation** — `validate_puzzle()` (`test_puzzle.ts`) checks letter positions, adjacency, no extra letters before/after words, no duplicate positions within a word, and no duplicate words.
+
+### History Migration
+
+`generateAndMigratePuzzles()` also handles puzzle history management:
+
+1. **Split** — Puzzles in `puzzles_normal.ts` with dates before today are identified as old.
+2. **Archive** — Old puzzles are appended to `puzzles_normal_historical.ts` (deduplicated by date).
+3. **Generate** — New puzzles are generated starting 3 days from today.
+4. **Merge** — New puzzles are combined with remaining current puzzles. If a new puzzle has the same date as an existing one, the new puzzle overwrites it.
+5. **Write** — The merged puzzle list is sorted by date and written to `puzzles_normal.ts`.
+
+---
+
 ## Key Files
 
 | Area | File | Notable Lines |
@@ -224,6 +267,8 @@ Only logged-in users can submit feedback. The server validates that the feedback
 | Constants | `lib/game-utils.ts` | 3–4 (start date, guess limit), 25–30 (puzzle number), 78–87 (consecutive days) |
 | Grid | `lib/grid.ts` | 14–155 (`Grid8x8` class) |
 | Schema / types | `lib/schema.ts` | 6–19 (game state types), 36–43 (`Stats` interface) |
+| Puzzle generation | `gen_puzzle.ts` | 232–260 (word selection), 138–230 (grid placement), 314–423 (migration) |
+| Puzzle validation | `test_puzzle.ts` | 3–104 |
 | Puzzle lists | `lib/puzzles_normal.ts`, `lib/puzzles_hard.ts`, `lib/puzzles_normal_historical.ts` | |
 | Puzzle lookup | `server/puzzles.ts` | 35–93 |
 | Guess thunk | `client/src/store/thunks/gameThunks.ts` | 100–218 |

@@ -47,6 +47,18 @@
 | `db-push.sh` | Runs `drizzle-kit push` to apply schema changes |
 | `scripts/DB_README.md` | Notes on database setup and management |
 
+### Puzzle Generation
+
+| Script | Purpose |
+|---|---|
+| `gen_puzzle.ts` | Generates new daily puzzles and migrates old ones to historical storage |
+
+```
+npx tsx gen_puzzle.ts [count]   # default: 90 puzzles
+```
+
+This script generates `count` new normal-difficulty puzzles starting 3 days from today, archives past puzzles to `lib/puzzles_normal_historical.ts`, and writes the updated puzzle list to `lib/puzzles_normal.ts`. See [Gameplay Mechanics — Puzzle Generation](../gameplay/mechanics.md#puzzle-generation) for details.
+
 ### Data Generation (TypeScript)
 
 | Script | Purpose |

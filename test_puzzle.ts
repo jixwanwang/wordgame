@@ -1,6 +1,11 @@
 import { Puzzle } from "./lib/puzzles";
 
 export function validate_puzzle(p: Puzzle): boolean {
+  // check for duplicate words
+  if (new Set(p.words).size !== p.words.length) {
+    return false;
+  }
+
   // check each word
   for (const word of p.words) {
     const positions = p.wordPositions[word];

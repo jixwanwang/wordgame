@@ -247,6 +247,11 @@ function generate_puzzle(difficulty: Difficulty, seed: number): Puzzle | null {
       words = [getRandomWord(7), getRandomWord(6), getRandomWord(6), getRandomWord(5)];
     }
 
+    // Prevent duplicate words in the same puzzle
+    if (new Set(words).size !== words.length) {
+      continue;
+    }
+
     const puzzle = generate_puzzle_internal(difficulty, words);
     if (puzzle != null) {
       return puzzle;
