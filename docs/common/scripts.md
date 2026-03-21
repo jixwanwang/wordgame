@@ -65,9 +65,16 @@ Optional flags:
 | Script | Purpose |
 |---|---|
 | `gen_puzzle.ts` | Generates new daily puzzles and migrates old ones to historical storage |
+| `scripts/gen-puzzle.sh` | Wrapper around `gen_puzzle.ts` with a default count |
 
 ```
 npx tsx gen_puzzle.ts [count]   # default: 90 puzzles
+```
+
+Shell wrapper (same default):
+
+```
+./scripts/gen-puzzle.sh [count]
 ```
 
 This script generates `count` new normal-difficulty puzzles starting 3 days from today, archives past puzzles to `lib/puzzles_normal_historical.ts`, and writes the updated puzzle list to `lib/puzzles_normal.ts`. See [Gameplay Mechanics — Puzzle Generation](../gameplay/mechanics.md#puzzle-generation) for details.
