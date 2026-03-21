@@ -46,6 +46,19 @@
 |---|---|
 | `db-push.sh` | Runs `drizzle-kit push` to apply schema changes |
 | `scripts/DB_README.md` | Notes on database setup and management |
+| `scripts/process-feedback.ts` | Review recent feedback, update dictionaries, and regenerate word lists |
+| `scripts/process-feedback.sh` | Wrapper to run the feedback review script without `npx` |
+
+Feedback review script (runs with `tsx`):
+
+```
+./scripts/process-feedback.sh --days 7
+```
+
+Optional flags:
+- `--days <n>`: Number of days to look back (default: 7)
+- `--limit <n>`: Max feedback rows to load
+- `--deploy`: Run build + deploy steps (currently disabled in script)
 
 ### Puzzle Generation
 
@@ -63,11 +76,10 @@ This script generates `count` new normal-difficulty puzzles starting 3 days from
 
 | Script | Purpose |
 |---|---|
-| `scripts/generate-all-words.ts` | Generates the `lib/all_words.ts` dictionary file |
 | `scripts/validate-dictionary.ts` | Validates the word lists for consistency |
 
 These TypeScript scripts are run directly with `tsx`:
 
 ```
-npx tsx scripts/generate-all-words.ts
+npx tsx scripts/validate-dictionary.ts
 ```
