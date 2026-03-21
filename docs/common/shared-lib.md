@@ -54,6 +54,4 @@ Word validation is done against static word lists.
 | File | Contents |
 |---|---|
 | `lib/dictionary_*.ts` | Word lists partitioned by word length (3–7 characters) |
-| `lib/all_words.ts` | Complete combined word list |
-
 `isValidWord(word)` is the public API for validation, used when checking guesses.
