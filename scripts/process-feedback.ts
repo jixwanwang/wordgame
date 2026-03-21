@@ -23,7 +23,7 @@ type FeedbackRow = {
   submittedAt: Date;
 };
 
-type ActionType = "add" | "remove" | "skip" | "quit";
+type ActionType = "add" | "remove" | "skip" | "ignore" | "quit";
 
 type DictionaryMap = Record<number, string[]>;
 
@@ -151,7 +151,7 @@ async function promptForAction(
 ): Promise<ActionType> {
   while (true) {
     const answer = await rl.question(
-      `Action for feedback ${row.id}? (a=add, r=remove, s=skip, q=quit): `,
+      `Action for feedback ${row.id}? (a=add, r=remove, i=ignore, s=skip, q=quit): `,
     );
     const normalized = answer.trim().toLowerCase();
 
@@ -167,11 +167,15 @@ async function promptForAction(
       return "skip";
     }
 
+    if (normalized === "i" || normalized === "ignore") {
+      return "ignore";
+    }
+
     if (normalized === "q" || normalized === "quit") {
       return "quit";
     }
 
-    console.log("Invalid input. Please enter a, r, s, or q.");
+    console.log("Invalid input. Please enter a, r, i, s, or q.");
   }
 }
 
@@ -279,6 +283,12 @@ async function main() {
       if (action === "quit") {
         console.log("Stopping early by request.");
         break;
+      }
+
+      if (action === "ignore") {
+        actionedIds.push(row.id);
+        console.log("Ignored feedback; removing entry from database.");
+        continue;
       }
 
       if (action === "skip") {

@@ -55,6 +55,8 @@ Feedback review script (runs with `tsx`):
 ./scripts/process-feedback.sh --days 7
 ```
 
+During review, you can choose add/remove/skip/ignore per item. `ignore` deletes the feedback without changing dictionaries.
+
 Optional flags:
 - `--days <n>`: Number of days to look back (default: 7)
 - `--limit <n>`: Max feedback rows to load
