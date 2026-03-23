@@ -72,25 +72,44 @@ Normal and hard modes are separate puzzle lists but share the same rules: same 8
 There is no point system. The result shown at game-over is:
 
 ```
-Crosses#[PUZZLE_NUMBER] [LETTERS_REVEALED]/[GUESSES_USED] 🔥[STREAK]
+Win:  crosses.io#[PUZZLE_NUMBER] [LETTERS_REVEALED]/[GUESSES_USED] 🔥[STREAK]
+Loss: crosses.io#[PUZZLE_NUMBER] [LETTERS_REVEALED]/[GUESSES_USED] 💀[LOSE_STREAK]
 ```
 
 - `LETTERS_REVEALED` — count of grid cells revealed, max 20
 - `GUESSES_USED` — guesses consumed out of 15
 - `STREAK` — current win streak (only shown on a win)
+- `LOSE_STREAK` — current lose streak (only shown on a loss with 2+ consecutive losses)
 
-The score display is built in `client/src/components/game-over-stats.tsx:22–26`. There are no bonuses, multipliers, or penalties beyond what is captured in these two numbers.
+The score display is built in `client/src/components/game-over-stats.tsx:22–30`. There are no bonuses, multipliers, or penalties beyond what is captured in these two numbers.
 
 ---
 
 ## Streaks
 
-A streak is the count of consecutive daily wins.
+### Win Streaks
 
-### What Breaks a Streak
+A win streak is the count of consecutive daily wins.
+
+#### What Breaks a Win Streak
 
 - A **loss** resets the streak to 0.
 - A **skipped day** — winning on day N and not playing day N+1 — resets the streak on the next win (it starts back at 1).
+
+### Lose Streaks
+
+A lose streak is the count of consecutive daily losses. A lose streak must be at least **2 losses in a row** to be displayed. Represented with the skull emoji (💀).
+
+#### What Breaks a Lose Streak
+
+- A **win** ends the lose streak.
+- A **skipped day** — losing on day N and not playing day N+1 — resets the lose streak.
+
+#### Lose Streak Storage
+
+Lose streaks are **not stored** on the server or in localStorage. They are computed on the fly:
+- **Authenticated users**: `GET /api/lose-streak` computes from puzzle results in `server/stats.ts:computeCurrentLoseStreakFromHistory()`. This endpoint is only called after a loss.
+- **Unauthenticated users**: computed locally from localStorage in `client/src/lib/game-storage.ts:calculateLoseStreakFromHistory()`.
 
 ### Consecutive Day Check
 

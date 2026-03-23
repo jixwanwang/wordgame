@@ -8,6 +8,7 @@ export const selectGuesses = (state: RootState) => state.game.guesses;
 export const selectTotalGuessesRemaining = (state: RootState) =>
   state.game.totalGuessesRemaining;
 export const selectCurrentStreak = (state: RootState) => state.game.currentStreak;
+export const selectLoseStreak = (state: RootState) => state.game.loseStreak;
 export const selectDifficulty = (state: RootState) => state.game.difficulty;
 export const selectCurrentPuzzleDate = (state: RootState) => state.game.currentPuzzle;
 

@@ -32,6 +32,7 @@ Applied globally in `index.ts`:
 | `GET` | `/api/puzzle` | Optional | Fetch puzzle data; query params: `date` (MM-DD-YYYY), `difficulty` |
 | `POST` | `/api/submit` | Required | Submit a completed game result |
 | `GET` | `/api/history` | Required | Fetch all of the user's past results |
+| `GET` | `/api/lose-streak` | Required | Compute current lose streak (not stored; only called after a loss) |
 | `POST` | `/api/refresh-token` | Required | Issue a new JWT |
 | `GET` | `/api/auth/validate` | Required | Check whether the current token is valid |
 | `POST` | `/api/feedback` | Required | Submit user feedback (text blob) |

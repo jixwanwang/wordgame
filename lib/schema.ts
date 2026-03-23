@@ -15,6 +15,7 @@ export interface GameState {
   currentPuzzle: string;
   difficulty: "normal" | "hard";
   currentStreak: number;
+  loseStreak: number;
 }
 
 export interface SavedGameState {

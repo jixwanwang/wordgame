@@ -148,6 +148,56 @@ export function getCurrentStreak(): number {
   return calculateStreakFromHistory(history);
 }
 
+// Calculate lose streak from game history. Returns 0 if fewer than 2 consecutive losses.
+// Skipping a day resets the lose streak.
+export function calculateLoseStreakFromHistory(history: GameHistory): number {
+  const completedGames = Object.values(history.games).filter((game) => game.isComplete);
+
+  if (completedGames.length === 0) {
+    return 0;
+  }
+
+  // Sort by date in reverse chronological order (most recent first)
+  const sortedGames = completedGames.sort((a, b) => {
+    const dateA = parseDate(a.date);
+    const dateB = parseDate(b.date);
+    return dateB.getTime() - dateA.getTime();
+  });
+
+  // If the most recent game is a win, no lose streak
+  if (sortedGames[0].wonGame) {
+    return 0;
+  }
+
+  // Count consecutive losses
+  let loseStreak = 1;
+  let previousDate = parseDate(sortedGames[0].date);
+
+  for (let i = 1; i < sortedGames.length; i++) {
+    const game = sortedGames[i];
+
+    if (game.wonGame) {
+      break;
+    }
+
+    const currentDate = parseDate(game.date);
+
+    if (areConsecutiveDays(previousDate, currentDate)) {
+      loseStreak += 1;
+      previousDate = currentDate;
+    } else {
+      break;
+    }
+  }
+
+  return loseStreak >= 2 ? loseStreak : 0;
+}
+
+export function getCurrentLoseStreak(): number {
+  const history = getGameHistory();
+  return calculateLoseStreakFromHistory(history);
+}
+
 // Action: Clear all game history
 export function clearGameHistory(): void {
   localStorage.removeItem(STORAGE_KEY);

@@ -232,6 +232,11 @@ export const API = {
     }
   },
 
+  // Get lose streak (requires auth, only called after a loss)
+  async getLoseStreak(): Promise<{ success: boolean; loseStreak: number }> {
+    return apiRequest<{ success: boolean; loseStreak: number }>("/api/lose-streak");
+  },
+
   // Submit feedback (requires auth)
   async submitFeedback(feedback: string): Promise<{ success: boolean; message?: string }> {
     return apiRequest<{ success: boolean; message?: string }>("/api/feedback", {

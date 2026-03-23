@@ -30,6 +30,7 @@ import {
   selectGuesses,
   selectTotalGuessesRemaining,
   selectCurrentStreak,
+  selectLoseStreak,
 } from "@/store/selectors/gameSelectors";
 import { selectCurrentPuzzle, selectIsLoading } from "@/store/selectors/puzzleSelectors";
 import {
@@ -116,6 +117,7 @@ export default function Game({ difficulty }: GameProps) {
   const guesses = useAppSelector(selectGuesses);
   const totalGuessesRemaining = useAppSelector(selectTotalGuessesRemaining);
   const currentStreak = useAppSelector(selectCurrentStreak);
+  const loseStreak = useAppSelector(selectLoseStreak);
   const currentPuzzle = useAppSelector(selectCurrentPuzzle);
   const isLoading = useAppSelector(selectIsLoading);
   const revealedCells = useAppSelector(selectRevealedCells);
@@ -611,6 +613,7 @@ export default function Game({ difficulty }: GameProps) {
                     )}
                     puzzleNumber={puzzleNumber}
                     currentStreak={currentStreak}
+                    loseStreak={loseStreak}
                   />
                 )}
               </div>
