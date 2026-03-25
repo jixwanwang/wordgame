@@ -206,4 +206,60 @@ function computeCurrentStreakFromHistory(puzzles: PuzzleResult[]): {
   };
 }
 
-export { computeStatsFromHistory, computeCurrentStreakFromHistory };
+/**
+ * Compute the current lose streak from a user's puzzle history.
+ * A lose streak requires at least 2 consecutive losses. Returns 0 if fewer than 2.
+ * Skipping a day resets the lose streak (same as win streaks).
+ */
+function computeCurrentLoseStreakFromHistory(puzzles: PuzzleResult[]): number {
+  if (puzzles.length === 0) {
+    return 0;
+  }
+
+  // Exclude late plays from streak calculation
+  const onTimePuzzles = puzzles.filter((p) => !p.playedLate);
+
+  if (onTimePuzzles.length === 0) {
+    return 0;
+  }
+
+  // Sort puzzles by date (newest first)
+  const sortedPuzzles = [...onTimePuzzles].sort((a, b) => {
+    const dateA = parseDate(a.date);
+    const dateB = parseDate(b.date);
+    return dateB.getTime() - dateA.getTime();
+  });
+
+  // If most recent puzzle was won, no lose streak
+  if (sortedPuzzles[0].won) {
+    return 0;
+  }
+
+  // Count consecutive losses from the most recent backwards
+  let loseStreak = 1;
+  let previousDate = parseDate(sortedPuzzles[0].date);
+
+  for (let i = 1; i < sortedPuzzles.length; i++) {
+    const puzzle = sortedPuzzles[i];
+
+    // If this puzzle was won, streak ends
+    if (puzzle.won) {
+      break;
+    }
+
+    const currentDate = parseDate(puzzle.date);
+
+    if (areConsecutiveDays(previousDate, currentDate)) {
+      loseStreak += 1;
+      previousDate = currentDate;
+    } else {
+      // Gap in dates, stop counting
+      break;
+    }
+  }
+
+  // Only return if at least 2
+  return loseStreak >= 2 ? loseStreak : 0;
+}
+
+export { computeStatsFromHistory, computeCurrentStreakFromHistory, computeCurrentLoseStreakFromHistory };

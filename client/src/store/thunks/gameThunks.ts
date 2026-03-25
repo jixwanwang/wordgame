@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { API, Auth } from "@/lib/api-client";
-import { getGameForDay, addGuess, completeGame, getCurrentStreak } from "@/lib/game-storage";
+import { getGameForDay, addGuess, completeGame, getCurrentStreak, getCurrentLoseStreak } from "@/lib/game-storage";
 import type { RootState } from "../index";
 import type { Guess } from "@shared/lib/schema";
 import { setPuzzle, setLoading, setError } from "../slices/puzzleSlice";
@@ -9,6 +9,7 @@ import {
   makeWordGuess,
   updateGameStatus,
   updateStreak,
+  updateLoseStreak,
   restoreGameState,
   setPuzzleDate,
   resetGameToInitial,
@@ -68,6 +69,20 @@ export const fetchPuzzleThunk = createAsyncThunk(
             streak: currentStreak,
           }),
         );
+
+        // If restoring a completed loss, calculate lose streak
+        if (savedState.isComplete && !savedState.wonGame) {
+          if (Auth.isAuthenticated()) {
+            try {
+              const loseStreakResponse = await API.getLoseStreak();
+              dispatch(updateLoseStreak(loseStreakResponse.loseStreak));
+            } catch {
+              dispatch(updateLoseStreak(getCurrentLoseStreak()));
+            }
+          } else {
+            dispatch(updateLoseStreak(getCurrentLoseStreak()));
+          }
+        }
       } else {
         // No saved state, start fresh
         dispatch(resetGameToInitial());
@@ -179,6 +194,9 @@ export const makeGuessThunk = createAsyncThunk(
         } else {
           // Not authenticated, use local storage streak
           dispatch(updateStreak(localStreak));
+          if (!wonGame) {
+            dispatch(updateLoseStreak(getCurrentLoseStreak()));
+          }
         }
       }
     }
@@ -205,6 +223,17 @@ export const submitResultThunk = createAsyncThunk(
       // Use the streak from the API response
       if (response.streak != null) {
         dispatch(updateStreak(response.streak));
+      }
+
+      // Fetch lose streak from API only after a loss
+      if (!params.wonGame) {
+        try {
+          const loseStreakResponse = await API.getLoseStreak();
+          dispatch(updateLoseStreak(loseStreakResponse.loseStreak));
+        } catch {
+          // Fall back to local calculation on error
+          dispatch(updateLoseStreak(getCurrentLoseStreak()));
+        }
       }
 
       return response;

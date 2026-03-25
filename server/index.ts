@@ -19,7 +19,7 @@ import {
 import { NUM_GUESSES } from "@shared/lib/game-utils.js";
 import { getPuzzleByDate, getTodaysPuzzle } from "./puzzles.js";
 import { convertHistoryToResults } from "./history-converter.js";
-import { computeStatsFromHistory, computeCurrentStreakFromHistory } from "./stats.js";
+import { computeStatsFromHistory, computeCurrentStreakFromHistory, computeCurrentLoseStreakFromHistory } from "./stats.js";
 import { getTodayInPacificTime, getNowInPacificTime, areConsecutiveDays } from "./time-utils.js";
 
 /**
@@ -535,6 +535,41 @@ export function createApp(db: Database) {
       return res.status(500).json({
         success: false,
         message: "Failed to fetch history",
+      });
+    }
+  });
+
+  /**
+   * GET /api/lose-streak
+   * Get the current lose streak for the authenticated user.
+   * A lose streak requires at least 2 consecutive losses. Returns 0 otherwise.
+   * Not stored in the database — computed on the fly from puzzle results.
+   * Headers: Authorization: Bearer <token>
+   * Response: { success: boolean, loseStreak: number }
+   */
+  app.get("/api/lose-streak", authenticateToken, async (req: Request, res: Response) => {
+    const username = req.user?.username;
+
+    if (username == null) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    try {
+      const results = await db.getAllPuzzleResults(username);
+      const loseStreak = computeCurrentLoseStreakFromHistory(results);
+
+      return res.json({
+        success: true,
+        loseStreak,
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to compute lose streak",
       });
     }
   });

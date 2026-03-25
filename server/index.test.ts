@@ -850,6 +850,115 @@ describe('API Endpoints', () => {
     });
   });
 
+  describe('GET /api/lose-streak', () => {
+    test('should return 0 when user has no results', async () => {
+      const db = new MockDatabase();
+      await db.createUser('user123', 'password123');
+      const app = createApp(db);
+      const token = generateAuthToken('user123');
+
+      const response = await request(app)
+        .get('/api/lose-streak')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200)
+        .expect('Content-Type', /json/);
+
+      assert.strictEqual(response.body.success, true);
+      assert.strictEqual(response.body.loseStreak, 0);
+    });
+
+    test('should return 0 when user has only 1 loss', async () => {
+      const db = new MockDatabase();
+      await db.createUser('user123', 'password123');
+      await db.insertPuzzleResult('user123', '03-20-2026', ['A', 'B'], false, false);
+      const app = createApp(db);
+      const token = generateAuthToken('user123');
+
+      const response = await request(app)
+        .get('/api/lose-streak')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      assert.strictEqual(response.body.loseStreak, 0);
+    });
+
+    test('should return 2 when user has 2 consecutive losses', async () => {
+      const db = new MockDatabase();
+      await db.createUser('user123', 'password123');
+      await db.insertPuzzleResult('user123', '03-20-2026', ['A', 'B'], false, false);
+      await db.insertPuzzleResult('user123', '03-21-2026', ['A', 'B'], false, false);
+      const app = createApp(db);
+      const token = generateAuthToken('user123');
+
+      const response = await request(app)
+        .get('/api/lose-streak')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      assert.strictEqual(response.body.loseStreak, 2);
+    });
+
+    test('should return 0 when most recent game is a win', async () => {
+      const db = new MockDatabase();
+      await db.createUser('user123', 'password123');
+      await db.insertPuzzleResult('user123', '03-20-2026', ['A', 'B'], false, false);
+      await db.insertPuzzleResult('user123', '03-21-2026', ['A', 'B'], false, false);
+      await db.insertPuzzleResult('user123', '03-22-2026', ['A', 'B'], true, false);
+      const app = createApp(db);
+      const token = generateAuthToken('user123');
+
+      const response = await request(app)
+        .get('/api/lose-streak')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      assert.strictEqual(response.body.loseStreak, 0);
+    });
+
+    test('should reset lose streak when there is a gap in dates', async () => {
+      const db = new MockDatabase();
+      await db.createUser('user123', 'password123');
+      await db.insertPuzzleResult('user123', '03-18-2026', ['A', 'B'], false, false);
+      // Gap: 03-19 skipped
+      await db.insertPuzzleResult('user123', '03-20-2026', ['A', 'B'], false, false);
+      await db.insertPuzzleResult('user123', '03-21-2026', ['A', 'B'], false, false);
+      const app = createApp(db);
+      const token = generateAuthToken('user123');
+
+      const response = await request(app)
+        .get('/api/lose-streak')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      assert.strictEqual(response.body.loseStreak, 2);
+    });
+
+    test('should exclude late plays from lose streak', async () => {
+      const db = new MockDatabase();
+      await db.createUser('user123', 'password123');
+      await db.insertPuzzleResult('user123', '03-20-2026', ['A', 'B'], false, false);
+      await db.insertPuzzleResult('user123', '03-21-2026', ['A', 'B'], false, true); // late play
+      const app = createApp(db);
+      const token = generateAuthToken('user123');
+
+      const response = await request(app)
+        .get('/api/lose-streak')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      assert.strictEqual(response.body.loseStreak, 0);
+    });
+
+    test('should fail when not authenticated', async () => {
+      const db = new MockDatabase();
+      const app = createApp(db);
+
+      await request(app)
+        .get('/api/lose-streak')
+        .expect(401);
+    });
+  });
+
   describe('GET /health', () => {
     test('should return healthy status', async () => {
       const db = new MockDatabase();

@@ -8,6 +8,7 @@ interface GameOverStatsProps {
   totalLettersRevealed: number;
   puzzleNumber: number;
   currentStreak: number;
+  loseStreak: number;
 }
 
 export function GameOverStats({
@@ -16,12 +17,16 @@ export function GameOverStats({
   totalLettersRevealed,
   puzzleNumber,
   currentStreak,
+  loseStreak,
 }: GameOverStatsProps) {
   const [copied, setCopied] = useState(false);
 
   const shareText = () => {
     const base = `crosses.io#${puzzleNumber} ${totalLettersRevealed}/${numGuesses}`;
-    return won ? `${base} 🔥${currentStreak}` : base;
+    if (won) {
+      return `${base} 🔥${currentStreak}`;
+    }
+    return loseStreak >= 2 ? `${base} 💀${loseStreak}` : base;
   };
 
   const handleCopy = async () => {
@@ -47,7 +52,9 @@ export function GameOverStats({
         </div>
       ) : (
         <div className="text-center">
-          <p className="text-md text-gray-800 text-center">Try again on a new puzzle tomorrow.</p>
+          <p className="text-md text-gray-800 text-center">
+            Try again on a new puzzle tomorrow.
+          </p>
         </div>
       )}
 

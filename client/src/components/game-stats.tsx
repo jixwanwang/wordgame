@@ -33,7 +33,7 @@ export function GameStats({ gameState }: GameStatsProps) {
       case "won":
         return "You won!";
       case "lost":
-        return "Nice try!";
+        return gameState.loseStreak >= 2 ? `Nice try! 💀${gameState.loseStreak}` : "Nice try!";
       default:
         return "";
     }

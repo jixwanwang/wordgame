@@ -9,6 +9,7 @@ const initialState: GameState = {
   currentPuzzle: "",
   difficulty: "normal",
   currentStreak: 0,
+  loseStreak: 0,
 };
 
 const gameSlice = createSlice({
@@ -33,6 +34,9 @@ const gameSlice = createSlice({
     updateStreak: (state, action: PayloadAction<number>) => {
       state.currentStreak = action.payload;
     },
+    updateLoseStreak: (state, action: PayloadAction<number>) => {
+      state.loseStreak = action.payload;
+    },
     restoreGameState: (state, action: PayloadAction<SavedGameState & { streak: number }>) => {
       const { guessesRemaining, guesses, isComplete, wonGame, streak } = action.payload;
       state.totalGuessesRemaining = guessesRemaining;
@@ -51,6 +55,7 @@ const gameSlice = createSlice({
       state.gameStatus = "playing";
       state.guesses = [];
       state.currentStreak = 0;
+      state.loseStreak = 0;
     },
   },
 });
@@ -60,6 +65,7 @@ export const {
   makeWordGuess,
   updateGameStatus,
   updateStreak,
+  updateLoseStreak,
   restoreGameState,
   setDifficulty,
   setPuzzleDate,
