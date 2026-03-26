@@ -346,7 +346,7 @@ export default function Game({ difficulty }: GameProps) {
   // Handle keyboard input
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (showAuthModal) return;
+      if (showAuthModal || showFeedbackModal) return;
       if (gameStatus !== "playing") return;
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       if (e.key === "Enter") {
@@ -381,6 +381,7 @@ export default function Game({ difficulty }: GameProps) {
     gameStatus,
     showToast,
     showAuthModal,
+    showFeedbackModal,
     longestWordInPuzzle,
   ]);
 
