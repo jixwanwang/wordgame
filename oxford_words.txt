@@ -126,6 +126,7 @@ apple
 apply
 appoint
 approve
+april
 archive
 area
 arena
@@ -807,6 +808,7 @@ duo
 during
 dust
 duty
+dvd
 dynamic
 each
 eager
@@ -1097,6 +1099,7 @@ freedom
 freely
 freeze
 fresh
+friday
 fridge
 friend
 frog
@@ -1401,6 +1404,7 @@ itself
 jacket
 jail
 jam
+january
 jazz
 jeans
 jet
@@ -1413,7 +1417,9 @@ journey
 joy
 judge
 juice
+july
 jump
+june
 junior
 jury
 just
@@ -1685,6 +1691,7 @@ modern
 modest
 modify
 moment
+monday
 money
 monitor
 monk
@@ -1800,6 +1807,7 @@ obvious
 occupy
 occur
 ocean
+october
 odd
 odds
 off
@@ -2623,6 +2631,7 @@ summary
 summer
 summit
 sun
+sunday
 super
 superb
 supply
@@ -2827,6 +2836,7 @@ truth
 try
 tsunami
 tube
+tuesday
 tuition
 tune
 tunnel
