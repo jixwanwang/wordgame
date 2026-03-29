@@ -9,7 +9,14 @@ import { StatsModal } from "@/components/stats-modal";
 import { HistoryModal } from "@/components/history-modal";
 import { FeedbackModal } from "@/components/feedback-modal";
 import { SquareInput } from "@/components/square-input";
-import { CircleUserRound, UserRound, ChartColumnBig, LogOut, Calendar, MessageSquareWarning } from "lucide-react";
+import {
+  CircleUserRound,
+  UserRound,
+  ChartColumnBig,
+  LogOut,
+  Calendar,
+  MessageSquareWarning,
+} from "lucide-react";
 import { getGameNumber, NUM_GUESSES, calculateRevealedLetterCount } from "@shared/lib/game-utils";
 import {
   DropdownMenu,
@@ -237,14 +244,7 @@ export default function Game({ difficulty }: GameProps) {
       clearTimeout(authPromptTimeoutRef.current);
       authPromptTimeoutRef.current = null;
     }
-  }, [
-    currentPuzzle,
-    gameStatus,
-    hasAutoPromptedAuth,
-    isPlayingPastPuzzle,
-    showAuthModal,
-    today,
-  ]);
+  }, [currentPuzzle, gameStatus, hasAutoPromptedAuth, isPlayingPastPuzzle, showAuthModal, today]);
 
   useEffect(() => {
     return () => {
