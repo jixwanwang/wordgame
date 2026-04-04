@@ -145,10 +145,7 @@ function writeDictionaryFiles(projectRoot: string, dictionaries: DictionaryMap):
   }
 }
 
-async function promptForAction(
-  rl: readline.Interface,
-  row: FeedbackRow,
-): Promise<ActionType> {
+async function promptForAction(rl: readline.Interface, row: FeedbackRow): Promise<ActionType> {
   while (true) {
     const answer = await rl.question(
       `Action for feedback ${row.id}? (a=add, r=remove, i=ignore, s=skip, q=quit): `,
@@ -220,7 +217,7 @@ async function main() {
   const limitArg = parseNumberArg(args, "--limit");
   const shouldDeploy = args.includes("--deploy");
 
-  const days = daysArg ?? 7;
+  const days = daysArg ?? 30;
   if (days <= 0) {
     throw new Error("--days must be greater than 0");
   }
@@ -272,9 +269,7 @@ async function main() {
       console.log(`User: ${row.username}`);
       const submittedAt = row.submittedAt;
       const submittedAtText =
-        submittedAt === null || submittedAt === undefined
-          ? "unknown"
-          : submittedAt.toISOString();
+        submittedAt === null || submittedAt === undefined ? "unknown" : submittedAt.toISOString();
       console.log(`Submitted: ${submittedAtText}`);
       console.log(`Feedback: ${row.feedback}`);
 
