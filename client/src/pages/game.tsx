@@ -387,7 +387,7 @@ export default function Game({ difficulty }: GameProps) {
 
   if (isLoading || currentPuzzle == null) {
     return (
-      <div className="bg-white font-game min-h-screen flex items-center justify-center">
+      <div className="bg-white font-game h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="text-2xl font-bold text-gray-600">Loading puzzle...</div>
         </div>
@@ -397,7 +397,7 @@ export default function Game({ difficulty }: GameProps) {
   const puzzleNumber = getGameNumber(currentPuzzle.date);
 
   return (
-    <div className="bg-white font-game min-h-screen">
+    <div className="bg-white font-game fixed inset-0 overflow-y-auto">
       {/* Header */}
       <header className="text-center py-3 px-4 max-w-[440px] mx-auto" data-testid="game-header">
         <div className="flex items-center justify-between gap-3">

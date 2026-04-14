@@ -19,14 +19,14 @@ export function SquareInput({ value, maxLength = 6 }: SquareInputProps) {
           {letters.length === 0 ? (
             // Show first empty square with solid border when no input
             <div
-              className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-md sm:text-lg font-bold bg-white border-2 border-gray-400 transition-all duration-150"
+              className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-md sm:text-lg font-bold bg-white border-2 border-gray-400 transition-colors duration-150"
               data-testid="square-input-0"
             />
           ) : (
             letters.map((letter, index) => (
               <div
                 key={index}
-                className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-md sm:text-lg font-bold bg-white border-2 border-gray-400 transition-all duration-150"
+                className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-md sm:text-lg font-bold bg-white border-2 border-gray-400 transition-colors duration-150"
                 data-testid={`square-input-${index}`}
               >
                 <span className="text-dark">{letter}</span>
@@ -37,7 +37,7 @@ export function SquareInput({ value, maxLength = 6 }: SquareInputProps) {
           {/* Dashed outline square - positioned absolutely relative to the flex container */}
           {showDashedSquare && letters.length > 0 && (
             <div
-              className="absolute top-0 left-full ml-1 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-md sm:text-lg font-bold bg-white border-2 border-dashed border-gray-300 transition-all duration-150"
+              className="absolute top-0 left-full ml-1 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-md sm:text-lg font-bold bg-white border-2 border-dashed border-gray-300 transition-colors duration-150"
               data-testid={`square-input-${letters.length}`}
             />
           )}
