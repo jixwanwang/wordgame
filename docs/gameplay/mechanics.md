@@ -265,7 +265,9 @@ Generates `count` puzzles (default 90) starting 3 days from today, writing them 
 
 4. **Grid placement** — The first word is placed randomly (horizontal or vertical). Subsequent words are placed using `placeWord()`, which finds valid overlapping positions with existing letters. Supports horizontal, vertical, and diagonal directions.
 
-5. **Puzzle validation** — `validate_puzzle()` (`test_puzzle.ts`) checks letter positions, adjacency, no extra letters before/after words, no duplicate positions within a word, and no duplicate words.
+5. **Short-word intersection rule** — Any 3- or 4-letter word must intersect other words at 2+ distinct cells of its own. Multiple words meeting the short word at the same cell count as one intersection (so the rule enforces two different letter positions, not two crossings).
+
+6. **Puzzle validation** — `validate_puzzle()` (`test_puzzle.ts`) checks letter positions, adjacency, no extra letters before/after words, no duplicate positions within a word, and no duplicate words.
 
 ### History Migration
 

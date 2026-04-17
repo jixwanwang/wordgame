@@ -217,6 +217,29 @@ export function generate_puzzle_internal(difficulty: Difficulty, words: string[]
     wordPositions[words[i]] = result.positions;
   }
 
+  // Check that 3 and 4 letter words intersect other words at 2+ distinct positions.
+  // Multiple words meeting the short word at the same cell counts as one intersection.
+  for (const word of words) {
+    if (word.length > 4) {
+      continue;
+    }
+    const otherPositions = new Set<string>();
+    for (const otherWord of words) {
+      if (otherWord === word) {
+        continue;
+      }
+      for (const [r, c] of wordPositions[otherWord] as [number, number][]) {
+        otherPositions.add(`${r},${c}`);
+      }
+    }
+    const intersections = (wordPositions[word] as [number, number][]).filter(([r, c]) =>
+      otherPositions.has(`${r},${c}`),
+    ).length;
+    if (intersections < 2) {
+      return null;
+    }
+  }
+
   const puzzle = {
     date: `${Date.now()}`,
     words: words,
