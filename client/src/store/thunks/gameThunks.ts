@@ -1,8 +1,11 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import { API, Auth } from "@/lib/api-client";
+import { API, ApiError, Auth } from "@/lib/api-client";
 import { getGameForDay, addGuess, completeGame, getCurrentStreak, getCurrentLoseStreak } from "@/lib/game-storage";
 import type { RootState } from "../index";
-import type { Guess } from "@shared/lib/schema";
+import type { Guess, SavedGameState } from "@shared/lib/schema";
+import type { Puzzle } from "@shared/lib/puzzles_types";
+import { getPuzzleByDate } from "@shared/lib/puzzle-lookup";
+import { getTodayInPacificTime } from "@shared/lib/time-utils";
 import { setPuzzle, setLoading, setError } from "../slices/puzzleSlice";
 import {
   makeLetterGuess,
@@ -19,7 +22,82 @@ import { selectRevealedCount } from "../selectors/gridSelectors";
 import { selectCurrentPuzzle, selectPuzzleGrid } from "../selectors/puzzleSelectors";
 import { getTotalLettersInGrid } from "@/lib/grid-helpers";
 
-// Fetch puzzle from API and restore saved state if available
+interface LoadedPuzzle {
+  puzzle: Puzzle;
+  savedState: SavedGameState | undefined;
+  currentStreak: number;
+}
+
+async function loadPuzzleAuthenticated(
+  difficulty: "normal" | "hard",
+  date: string | undefined,
+): Promise<LoadedPuzzle> {
+  // Refresh ahead of expiry when we can — the server rejects expired tokens,
+  // so refresh-on-401 wouldn't work for an already-expired token.
+  // If refresh fails (network blip or the token is already past expiry), we
+  // don't handle it here — the next `getPuzzle` call will 401/403 and
+  // `loadPuzzle` will log out and fall back to the local bundle.
+  if (Auth.shouldRefreshToken()) {
+    await API.refreshToken();
+  }
+
+  const response = await API.getPuzzle(date, difficulty);
+  if (!response.date) {
+    throw new Error("Puzzle data missing date property");
+  }
+  const puzzle: Puzzle = {
+    date: response.date,
+    words: response.words,
+    grid: response.grid,
+    wordPositions: response.wordPositions,
+  };
+  const localSavedState = getGameForDay(puzzle.date);
+  return {
+    puzzle,
+    savedState: response.savedState ?? localSavedState,
+    currentStreak: response.currentStreak ?? getCurrentStreak(),
+  };
+}
+
+function loadPuzzleLocal(
+  difficulty: "normal" | "hard",
+  date: string | undefined,
+): LoadedPuzzle {
+  const today = getTodayInPacificTime();
+  const puzzle = getPuzzleByDate(date ?? today, difficulty, today);
+  if (puzzle === null) {
+    throw new Error("No puzzle available for this date");
+  }
+  return {
+    puzzle,
+    savedState: getGameForDay(puzzle.date),
+    currentStreak: getCurrentStreak(),
+  };
+}
+
+async function loadPuzzle(
+  difficulty: "normal" | "hard",
+  date: string | undefined,
+): Promise<LoadedPuzzle> {
+  if (!Auth.isAuthenticated()) {
+    return loadPuzzleLocal(difficulty, date);
+  }
+  try {
+    return await loadPuzzleAuthenticated(difficulty, date);
+  } catch (error) {
+    // Auth failed (expired/invalid token). Drop the stale token so we stop
+    // retrying, and fall back to the local bundle so the user can still play.
+    // Non-auth errors (network, 5xx) surface to the caller.
+    if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+      Auth.logout();
+      return loadPuzzleLocal(difficulty, date);
+    }
+    throw error;
+  }
+}
+
+// Fetch puzzle (from API when authenticated, from local data otherwise)
+// and restore saved state if available.
 export const fetchPuzzleThunk = createAsyncThunk(
   "game/fetchPuzzle",
   async (
@@ -30,38 +108,11 @@ export const fetchPuzzleThunk = createAsyncThunk(
       dispatch(setLoading(true));
 
       const { difficulty, date } = params;
+      const { puzzle, savedState, currentStreak } = await loadPuzzle(difficulty, date);
 
-      // Fetch puzzle from server
-      const response = await API.getPuzzle(date, difficulty);
-      const puzzle = {
-        date: response.date,
-        words: response.words,
-        grid: response.grid,
-        wordPositions: response.wordPositions,
-      };
-
-      console.log("*****", response);
-      // Guard against missing puzzle date
-      if (!puzzle.date) {
-        throw new Error("Puzzle data missing date property");
-      }
-
-      // Set puzzle data
       dispatch(setPuzzle(puzzle));
       dispatch(setPuzzleDate(puzzle.date));
 
-      // Get saved state (server takes precedence over local storage)
-      const serverSavedState = response.savedState;
-      const localSavedState = getGameForDay(puzzle.date);
-      const savedState = serverSavedState || localSavedState;
-
-      // Get current streak
-      let currentStreak = getCurrentStreak();
-      if (Auth.isAuthenticated() && response.currentStreak != null) {
-        currentStreak = response.currentStreak;
-      }
-
-      // Restore game state if saved state exists
       if (savedState && savedState.guesses && savedState.guesses.length > 0) {
         dispatch(
           restoreGameState({

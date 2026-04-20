@@ -67,18 +67,8 @@ fi
 echo ""
 echo "Step 3/6: Installing and configuring Nginx..."
 
-# Install Nginx if not present
-# Nginx acts as a reverse proxy: Client <--HTTPS--> Nginx <--HTTP--> Node.js (port 3000)
-# This allows us to terminate SSL at Nginx and keep the Node.js app simple
-if ! command -v nginx &> /dev/null; then
-    echo "  Installing Nginx..."
-    sudo apt-get install -y nginx
-else
-    echo "  ✓ Nginx already installed"
-fi
-
-# Install Certbot if not present
-# Certbot automates obtaining and renewing SSL certificates from Let's Encrypt
+# Certbot is required by step 4. Install it here so it's available before
+# setup-nginx.sh's auto-chain check (which probes `certbot certificates`).
 if ! command -v certbot &> /dev/null; then
     echo "  Installing Certbot..."
     sudo apt-get install -y certbot python3-certbot-nginx
@@ -86,55 +76,11 @@ else
     echo "  ✓ Certbot already installed"
 fi
 
-# Configure Nginx reverse proxy
-echo "  Configuring Nginx reverse proxy for $DOMAIN..."
-
-# Create Nginx configuration that proxies requests to Node.js on port 3000
-# The proxy_set_header directives ensure your app receives the original client info
-sudo tee /etc/nginx/sites-available/api > /dev/null <<'NGINX_CONFIG'
-server {
-    # Initial HTTP configuration - Certbot will add HTTPS block automatically
-    listen 80;
-    listen [::]:80;
-
-    server_name api.crosses.io;
-
-    # Proxy all requests to the Node.js API on localhost:3000
-    location / {
-        proxy_pass http://localhost:3000;
-
-        # WebSocket support (if needed in future)
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-
-        # Forward real client IP to the application
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        # Reasonable timeouts
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
-    }
-}
-NGINX_CONFIG
-
-# Enable the site by symlinking to sites-enabled
-sudo ln -sf /etc/nginx/sites-available/api /etc/nginx/sites-enabled/
-
-# Remove default Nginx site to avoid conflicts
-sudo rm -f /etc/nginx/sites-enabled/default
-
-# Test Nginx configuration for syntax errors before reloading
-echo "  Testing Nginx configuration..."
-sudo nginx -t
-
-# Reload Nginx to apply changes
-sudo systemctl reload nginx
+# Delegate Nginx install + config to setup-nginx.sh so the rate-limit zones
+# and per-route limits stay in one canonical place. On a fresh VM no cert
+# exists yet, so setup-nginx.sh's SSL auto-chain is a no-op here and step 4
+# below handles the initial certbot run.
+bash ~/wordgame/scripts/setup-nginx.sh
 
 # ============================================
 # Step 4: Obtain SSL Certificate

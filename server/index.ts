@@ -14,19 +14,29 @@ import {
   validatePassword,
   generateAuthToken,
   authenticateToken,
-  optionalAuthenticateToken,
 } from "./auth.js";
 import { NUM_GUESSES } from "@shared/lib/game-utils.js";
 import { getPuzzleByDate, getTodaysPuzzle } from "./puzzles.js";
+import { compareDates } from "../lib/puzzle-lookup.js";
+import type { GameGrid } from "../lib/puzzles_types.js";
+import type { SavedGameState } from "../lib/schema.js";
 import { convertHistoryToResults } from "./history-converter.js";
 import { computeStatsFromHistory, computeCurrentStreakFromHistory, computeCurrentLoseStreakFromHistory } from "./stats.js";
-import { getTodayInPacificTime, getNowInPacificTime, areConsecutiveDays } from "./time-utils.js";
+import { getTodayInPacificTime, areConsecutiveDays } from "../lib/time-utils.js";
+import { createPerUserLimiter } from "./rate-limit.js";
 
 /**
  * Create and configure the Express app with dependencies injected
  */
 export function createApp(db: Database) {
   const app = express();
+
+  // Trust the first proxy hop (Nginx) so req.ip reflects the real client.
+  app.set("trust proxy", 1);
+
+  // Per-user rate limiter for authenticated routes. Fresh state per app so
+  // tests don't accumulate counts across cases.
+  const perUserLimiter = createPerUserLimiter();
 
   // CORS configuration
   // Allow requests from Cloudflare Workers frontends
@@ -108,7 +118,7 @@ export function createApp(db: Database) {
 
       // If history is provided, convert and save it
       if (history) {
-        const results = convertHistoryToResults(history);
+        const results = convertHistoryToResults(history, getTodayInPacificTime());
         for (const result of results) {
           try {
             // Uploaded history is treated as on-time (playedLate: false)
@@ -209,7 +219,7 @@ export function createApp(db: Database) {
 
       // If history is provided, convert and save it
       if (history) {
-        const results = convertHistoryToResults(history);
+        const results = convertHistoryToResults(history, getTodayInPacificTime());
         for (const result of results) {
           try {
             // Uploaded history is treated as on-time (playedLate: false)
@@ -276,21 +286,23 @@ export function createApp(db: Database) {
 
   /**
    * GET /api/puzzle
-   * Fetch the puzzle of the day (optionally authenticated)
+   * Fetch the puzzle of the day (requires authentication)
    * Query params: date? (optional MM-DD-YYYY format, defaults to today), difficulty? (normal or hard, defaults to normal)
-   * Headers: Authorization: Bearer <token> (optional)
+   * Headers: Authorization: Bearer <token>
    * Response: {
    *   id: string,
    *   date: string (MM-DD-YYYY),
    *   words: string[],
    *   grid: GameGrid,
    *   wordPositions: Record<string, [number, number][]>,
-   *   auth?: { username: string, tokenStatus: string },
    *   savedState?: SavedGameState,
    *   currentStreak?: number
    * }
+   *
+   * Unauthenticated clients read puzzles from the static bundle directly; this
+   * endpoint is authenticated so that unauth traffic never reaches the server.
    */
-  app.get("/api/puzzle", optionalAuthenticateToken, async (req: Request, res: Response) => {
+  app.get("/api/puzzle", authenticateToken, perUserLimiter, async (req: Request, res: Response) => {
     const requestedDate = req.query.date as string | undefined;
     const difficulty = (req.query.difficulty as "normal" | "hard" | undefined) || "normal";
 
@@ -299,22 +311,13 @@ export function createApp(db: Database) {
     let puzzleDate;
 
     if (requestedDate) {
-      // Validate date format (MM-DD-YYYY)
       if (!/^\d{2}-\d{2}-\d{4}$/.test(requestedDate)) {
         return res.status(400).json({
           success: false,
           message: "Invalid date format. Use MM-DD-YYYY",
         });
       }
-      const today = getNowInPacificTime();
-      const [month, day, year] = requestedDate.split("-");
-      if (
-        parseInt(year) > today.getFullYear() ||
-        (parseInt(year) === today.getFullYear() && parseInt(month) > today.getMonth() + 1) ||
-        (parseInt(year) === today.getFullYear() &&
-          parseInt(month) === today.getMonth() + 1 &&
-          parseInt(day) > today.getDate())
-      ) {
+      if (compareDates(requestedDate, getTodayInPacificTime()) > 0) {
         return res.status(400).json({
           success: false,
           message: "cannot get puzzle for the future",
@@ -325,7 +328,6 @@ export function createApp(db: Database) {
       puzzleDate = requestedDate;
     } else {
       puzzle = getTodaysPuzzle(difficulty);
-      // Get today's date in Pacific Time in MM-DD-YYYY format
       puzzleDate = getTodayInPacificTime();
     }
 
@@ -336,8 +338,17 @@ export function createApp(db: Database) {
       });
     }
 
-    // Format response
-    const response: any = {
+    interface PuzzleResponse {
+      id: string;
+      date: string;
+      words: string[];
+      grid: GameGrid;
+      wordPositions: Record<string, [number, number][]>;
+      currentStreak?: number;
+      savedState?: SavedGameState;
+    }
+
+    const response: PuzzleResponse = {
       id: `puzzle_${puzzleDate.replace(/-/g, "_")}`,
       date: puzzleDate,
       words: puzzle.words,
@@ -345,52 +356,39 @@ export function createApp(db: Database) {
       wordPositions: puzzle.wordPositions,
     };
 
-    // Include auth information if user is authenticated or if token was provided
-    if (req.tokenStatus && req.tokenStatus !== "missing") {
-      response.auth = {
-        username: req.user?.username,
-        tokenStatus: req.tokenStatus,
-      };
-    } else if (req.user) {
-      // Valid authenticated user
-      response.auth = {
-        username: req.user.username,
-        tokenStatus: "valid",
-      };
+    if (req.user == null) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
     }
-
-    // If user is authenticated, fetch their result and stats for this puzzle
-    if (req.user?.username) {
-      try {
-        // Fetch user stats (includes current streak)
-        const userStats = await db.getUserStats(req.user.username);
-        if (userStats) {
-          response.currentStreak = userStats.currentStreak;
-        }
-
-        // Fetch user result for this specific puzzle
-        const userResult = await db.getPuzzleResult(req.user.username, puzzleDate);
-        if (userResult) {
-          // Convert PuzzleResult to SavedGameState format
-          response.savedState = {
-            date: userResult.date,
-            guessesRemaining: NUM_GUESSES - userResult.numGuesses,
-            guesses: userResult.guesses,
-            isComplete: true, // If result exists, game is complete
-            wonGame: userResult.won,
-          };
-        }
-      } catch (error) {
-        console.error("Error fetching user result:", error);
-
-        if (error instanceof Error) {
-          console.error("Error message:", error.message);
-          console.error("Stack trace:", error.stack);
-        } else if (error && typeof error === "object") {
-          console.error("Error object:", JSON.stringify(error, null, 2));
-        }
-        // Don't fail the request if we can't fetch the result
+    const username = req.user.username;
+    try {
+      const userStats = await db.getUserStats(username);
+      if (userStats) {
+        response.currentStreak = userStats.currentStreak;
       }
+
+      const userResult = await db.getPuzzleResult(username, puzzleDate);
+      if (userResult) {
+        response.savedState = {
+          date: userResult.date,
+          guessesRemaining: NUM_GUESSES - userResult.numGuesses,
+          guesses: userResult.guesses,
+          isComplete: true,
+          wonGame: userResult.won,
+        };
+      }
+    } catch (error) {
+      console.error("Error fetching user result:", error);
+
+      if (error instanceof Error) {
+        console.error("Error message:", error.message);
+        console.error("Stack trace:", error.stack);
+      } else if (error && typeof error === "object") {
+        console.error("Error object:", JSON.stringify(error, null, 2));
+      }
+      // Don't fail the request if we can't fetch the result
     }
 
     return res.json(response);
@@ -403,20 +401,17 @@ export function createApp(db: Database) {
    * Request body: { puzzleId: string, guesses: string[], won: boolean }
    * Response: { success: boolean, message?: string }
    */
-  app.post("/api/submit", authenticateToken, async (req: Request, res: Response) => {
+  app.post("/api/submit", authenticateToken, perUserLimiter, async (req: Request, res: Response) => {
     const { puzzleId, guesses, won } = req.body;
 
-    // Get username from JWT token
-    const username = req.user?.username;
-
-    if (username == null) {
+    if (req.user == null) {
       return res.status(401).json({
         success: false,
         message: "Authentication required",
       });
     }
+    const username = req.user.username;
 
-    // Validation
     if (puzzleId == null || guesses == null || won == null) {
       return res.status(400).json({
         success: false,
@@ -428,8 +423,23 @@ export function createApp(db: Database) {
       // Extract date from puzzleId (format: puzzle_MM_DD_YYYY)
       const datePart = puzzleId.replace("puzzle_", "").replace(/_/g, "-");
 
-      // Determine if the puzzle is being played after its day (historical play)
+      if (!/^\d{2}-\d{2}-\d{4}$/.test(datePart)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid puzzleId",
+        });
+      }
+
+      // Reject submissions dated in the future — guards against misbehaving clients.
       const today = getTodayInPacificTime();
+      if (compareDates(datePart, today) > 0) {
+        return res.status(400).json({
+          success: false,
+          message: "cannot submit a result for a future date",
+        });
+      }
+
+      // Determine if the puzzle is being played after its day (historical play)
       const playedLate = datePart !== today;
 
       // Get current user stats to check if they've already submitted for this date
@@ -503,7 +513,7 @@ export function createApp(db: Database) {
    * Headers: Authorization: Bearer <token>
    * Response: { success: boolean, results?: PuzzleResult[], message?: string }
    */
-  app.get("/api/history", authenticateToken, async (req: Request, res: Response) => {
+  app.get("/api/history", authenticateToken, perUserLimiter, async (req: Request, res: Response) => {
     const username = req.user?.username;
 
     if (username == null) {
@@ -547,7 +557,7 @@ export function createApp(db: Database) {
    * Headers: Authorization: Bearer <token>
    * Response: { success: boolean, loseStreak: number }
    */
-  app.get("/api/lose-streak", authenticateToken, async (req: Request, res: Response) => {
+  app.get("/api/lose-streak", authenticateToken, perUserLimiter, async (req: Request, res: Response) => {
     const username = req.user?.username;
 
     if (username == null) {
@@ -580,7 +590,7 @@ export function createApp(db: Database) {
    * Headers: Authorization: Bearer <token>
    * Response: { success: boolean, token?: string, message?: string }
    */
-  app.post("/api/refresh-token", authenticateToken, async (req: Request, res: Response) => {
+  app.post("/api/refresh-token", authenticateToken, perUserLimiter, async (req: Request, res: Response) => {
     const username = req.user?.username;
 
     if (username == null) {
@@ -613,7 +623,7 @@ export function createApp(db: Database) {
    * Headers: Authorization: Bearer <token>
    * Response: { valid: boolean }
    */
-  app.get("/api/auth/validate", authenticateToken, async (_req: Request, res: Response) => {
+  app.get("/api/auth/validate", authenticateToken, perUserLimiter, async (_req: Request, res: Response) => {
     // If we reach here, the token is valid (authenticateToken middleware succeeded)
     return res.json({ valid: true });
   });
@@ -625,7 +635,7 @@ export function createApp(db: Database) {
    * Request body: { feedback: string }
    * Response: { success: boolean, message?: string }
    */
-  app.post("/api/feedback", authenticateToken, async (req: Request, res: Response) => {
+  app.post("/api/feedback", authenticateToken, perUserLimiter, async (req: Request, res: Response) => {
     const username = req.user?.username;
 
     if (username == null) {

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Card } from "@/components/ui/card";
 import { Flame, Trophy, Cake } from "lucide-react";
 import { API, Auth } from "@/lib/api-client";
-import { getTodayInPacificTime } from "../../../server/time-utils";
+import { getTodayInPacificTime } from "@shared/lib/time-utils";
 import type { Stats } from "@shared/lib/schema";
 import faviconUrl from "../../favicon.png";
 

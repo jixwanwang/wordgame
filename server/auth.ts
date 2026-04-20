@@ -145,30 +145,6 @@ export function verifyAuthToken(token: string): JWTPayload | null {
 }
 
 /**
- * Verify a JWT token and return detailed status
- * Returns both the payload and the status for better error handling
- */
-export function verifyAuthTokenWithStatus(token: string): {
-  payload: JWTPayload | null;
-  status: TokenStatus;
-} {
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
-    return { payload: decoded, status: "valid" };
-  } catch (error) {
-    if (error instanceof jwt.TokenExpiredError) {
-      return { payload: null, status: "expired" };
-    }
-    return { payload: null, status: "invalid" };
-  }
-}
-
-/**
- * Token status for optional authentication
- */
-export type TokenStatus = "valid" | "expired" | "invalid" | "missing";
-
-/**
  * Extend Express User interface to include our user information
  * This is the standard way to add user fields when using Express
  */
@@ -179,7 +155,6 @@ declare global {
     }
     interface Request {
       user?: User;
-      tokenStatus?: TokenStatus;
     }
   }
 }
@@ -216,34 +191,3 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
   next();
 }
 
-/**
- * Express middleware for optional authentication
- * Does not fail on missing/invalid tokens, but sets tokenStatus for the route to check
- * Useful for endpoints that should work both authenticated and unauthenticated
- */
-export function optionalAuthenticateToken(req: Request, _res: Response, next: NextFunction): void {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
-
-  if (!token) {
-    // No token provided - this is okay for optional auth
-    req.tokenStatus = "missing";
-    req.user = undefined;
-    next();
-    return;
-  }
-
-  const { payload, status } = verifyAuthTokenWithStatus(token);
-
-  req.tokenStatus = status;
-
-  if (payload !== null) {
-    // Valid token - attach user info
-    req.user = { username: payload.username };
-  } else {
-    // Invalid or expired token - don't attach user but continue
-    req.user = undefined;
-  }
-
-  next();
-}

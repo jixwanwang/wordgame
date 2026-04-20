@@ -51,7 +51,7 @@ import { GuessesModal } from "@/components/guesses-modal";
 import { useHintText } from "@/hooks/use-hint-text";
 import { TransitionGroup, CSSTransition } from "react-transition-group";
 import { useSearch, useLocation } from "wouter";
-import { getTodayInPacificTime } from "../../../server/time-utils";
+import { getTodayInPacificTime } from "@shared/lib/time-utils";
 
 // separate the storage layer with a proper api for actions rather than whole state updates
 // use the error popup for tutorial. start with guess a letter (and give a suggestion that will guarantee multiple)

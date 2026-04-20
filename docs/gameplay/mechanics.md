@@ -17,7 +17,7 @@ Puzzles are date-keyed (`MM-DD-YYYY`) and tied to a difficulty. Two sets exist:
 
 Historical puzzles (no longer the daily puzzle) are in `lib/puzzles_normal_historical.ts`. The server falls back to this list if the requested date is not found in the main normal set.
 
-A new puzzle is published daily at midnight **Pacific Time** (`server/time-utils.ts:8–23`). The game began on **September 6, 2025** (`lib/game-utils.ts:3`).
+A new puzzle is published daily at midnight **Pacific Time** (`lib/time-utils.ts`, `getTodayInPacificTime`). The game began on **September 6, 2025** (`lib/game-utils.ts:3`).
 
 **Puzzle number** is computed as days elapsed since the start date plus 1 (`lib/game-utils.ts:25–30`):
 
@@ -113,7 +113,7 @@ Lose streaks are **not stored** on the server or in localStorage. They are compu
 
 ### Consecutive Day Check
 
-`areConsecutiveDays()` in `server/time-utils.ts:62–79` (and mirrored client-side in `lib/game-utils.ts:78–87`) checks that exactly one calendar day separates two dates. It tolerates DST transitions (23–25 hour days).
+`areConsecutiveDays()` in `lib/time-utils.ts` (shared; also mirrored in `lib/game-utils.ts:78–87` for client-only code) checks that exactly one calendar day separates two dates. It tolerates DST transitions (23–25 hour days).
 
 ### Server Streak Calculation
 
@@ -298,5 +298,5 @@ Generates `count` puzzles (default 90) starting 3 days from today, writing them 
 | Local storage | `client/src/lib/game-storage.ts` | 16–158 |
 | Stats computation | `server/stats.ts` | 10–192 |
 | Streak update | `server/index.ts` | 451–474 |
-| Time utilities | `server/time-utils.ts` | 8–79 |
+| Time utilities | `lib/time-utils.ts` | — |
 | History sync | `server/history-converter.ts` | 25–71 |

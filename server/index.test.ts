@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import { createApp } from './index.js';
 import type { Database, PuzzleResult, UserStats } from './db.js';
 import { generateAuthToken, verifyAuthToken } from './auth.js';
-import { getTodayInPacificTime } from './time-utils.js';
+import { getTodayInPacificTime } from '../lib/time-utils.js';
 
 // Mock database for testing
 class MockDatabase implements Database {
@@ -445,27 +445,21 @@ describe('API Endpoints', () => {
   });
 
   describe('GET /api/puzzle', () => {
-    test('should return puzzle of the day without authentication', async () => {
+    test('should reject unauthenticated requests', async () => {
       const db = new MockDatabase();
       const app = createApp(db);
 
       const response = await request(app)
         .get('/api/puzzle')
-        .query({ date: '02-19-2026' }) // Use a specific date that exists in puzzles
-        .expect(200)
+        .query({ date: '02-19-2026' })
+        .expect(401)
         .expect('Content-Type', /json/);
 
-      assert.ok(response.body.id);
-      assert.ok(response.body.date);
-      assert.ok(Array.isArray(response.body.words));
-      assert.ok(Array.isArray(response.body.grid));
-      assert.strictEqual(response.body.grid.length, 8);
-      assert.ok(response.body.wordPositions);
-      // Should not have auth info when no token provided
-      assert.strictEqual(response.body.auth, undefined);
+      assert.strictEqual(response.body.success, false);
+      assert.strictEqual(response.body.message, 'Authentication token required');
     });
 
-    test('should return puzzle with auth info when valid token provided', async () => {
+    test('should return puzzle when valid token provided', async () => {
       const db = new MockDatabase();
       const app = createApp(db);
       const username = 'testuser';
@@ -479,19 +473,17 @@ describe('API Endpoints', () => {
         .expect('Content-Type', /json/);
 
       assert.ok(response.body.id);
-      assert.ok(response.body.words);
-      assert.ok(response.body.grid);
-      // Should include auth info with valid token
-      assert.ok(response.body.auth);
-      assert.strictEqual(response.body.auth.username, username);
-      assert.strictEqual(response.body.auth.tokenStatus, 'valid');
+      assert.ok(response.body.date);
+      assert.ok(Array.isArray(response.body.words));
+      assert.ok(Array.isArray(response.body.grid));
+      assert.strictEqual(response.body.grid.length, 8);
+      assert.ok(response.body.wordPositions);
     });
 
-    test('should return puzzle with expired status when token is expired', async () => {
+    test('should reject expired tokens', async () => {
       const db = new MockDatabase();
       const app = createApp(db);
 
-      // Create an expired token (with -1 second expiration)
       const expiredToken = jwt.sign(
         { username: 'testuser' },
         process.env.JWT_SECRET || 'dev-secret-key-change-in-production',
@@ -502,20 +494,13 @@ describe('API Endpoints', () => {
         .get('/api/puzzle')
         .query({ date: '02-19-2026' })
         .set('Authorization', `Bearer ${expiredToken}`)
-        .expect(200)
+        .expect(403)
         .expect('Content-Type', /json/);
 
-      // Should still return puzzle data
-      assert.ok(response.body.id);
-      assert.ok(response.body.words);
-      assert.ok(response.body.grid);
-      // Should include auth info indicating token is expired
-      assert.ok(response.body.auth);
-      assert.strictEqual(response.body.auth.tokenStatus, 'expired');
-      assert.strictEqual(response.body.auth.username, undefined);
+      assert.strictEqual(response.body.success, false);
     });
 
-    test('should return puzzle with invalid status when token is malformed', async () => {
+    test('should reject malformed tokens', async () => {
       const db = new MockDatabase();
       const app = createApp(db);
 
@@ -523,27 +508,22 @@ describe('API Endpoints', () => {
         .get('/api/puzzle')
         .query({ date: '02-19-2026' })
         .set('Authorization', 'Bearer invalid-token-here')
-        .expect(200)
+        .expect(403)
         .expect('Content-Type', /json/);
 
-      // Should still return puzzle data
-      assert.ok(response.body.id);
-      assert.ok(response.body.words);
-      assert.ok(response.body.grid);
-      // Should include auth info indicating token is invalid
-      assert.ok(response.body.auth);
-      assert.strictEqual(response.body.auth.tokenStatus, 'invalid');
-      assert.strictEqual(response.body.auth.username, undefined);
+      assert.strictEqual(response.body.success, false);
     });
 
     test('should accept optional date parameter', async () => {
       const db = new MockDatabase();
       const app = createApp(db);
+      const token = generateAuthToken('testuser');
       const requestedDate = '02-19-2026';
 
       const response = await request(app)
         .get('/api/puzzle')
         .query({ date: requestedDate })
+        .set('Authorization', `Bearer ${token}`)
         .expect(200)
         .expect('Content-Type', /json/);
 
@@ -556,10 +536,12 @@ describe('API Endpoints', () => {
     test('should return 404 for date with no puzzle', async () => {
       const db = new MockDatabase();
       const app = createApp(db);
+      const token = generateAuthToken('testuser');
 
       const response = await request(app)
         .get('/api/puzzle')
-        .query({ date: '01-01-2020' }) // Date with no puzzle
+        .query({ date: '01-01-2020' })
+        .set('Authorization', `Bearer ${token}`)
         .expect(404)
         .expect('Content-Type', /json/);
 
@@ -570,10 +552,12 @@ describe('API Endpoints', () => {
     test('should validate date format', async () => {
       const db = new MockDatabase();
       const app = createApp(db);
+      const token = generateAuthToken('testuser');
 
       const response = await request(app)
         .get('/api/puzzle')
         .query({ date: 'invalid-date' })
+        .set('Authorization', `Bearer ${token}`)
         .expect(400)
         .expect('Content-Type', /json/);
 
@@ -741,6 +725,86 @@ describe('API Endpoints', () => {
 
       assert.strictEqual(response.body.success, false);
       assert.ok(response.body.message.includes('required'));
+    });
+
+    test('should reject future-dated submissions', async () => {
+      const db = new MockDatabase();
+      await db.createUser('user123', 'password123');
+      const app = createApp(db);
+      const token = generateAuthToken('user123');
+
+      const today = getTodayInPacificTime();
+      const [m, d, y] = today.split('-');
+      const futureDate = `${m}-${d}-${parseInt(y) + 1}`;
+      const futurePuzzleId = `puzzle_${futureDate.replace(/-/g, '_')}`;
+
+      const response = await request(app)
+        .post('/api/submit')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          puzzleId: futurePuzzleId,
+          guesses: ['A'],
+          won: true,
+        })
+        .expect(400)
+        .expect('Content-Type', /json/);
+
+      assert.strictEqual(response.body.success, false);
+      assert.ok(response.body.message.includes('future'));
+
+      // Ensure nothing was persisted
+      const stored = await db.getPuzzleResult('user123', futureDate);
+      assert.strictEqual(stored, null);
+    });
+  });
+
+  describe('History upload future-date hardening', () => {
+    test('should drop future-dated entries on register', async () => {
+      const db = new MockDatabase();
+      const app = createApp(db);
+
+      const today = getTodayInPacificTime();
+      const [m, d, y] = today.split('-');
+      const futureDate = `${m}-${d}-${parseInt(y) + 1}`;
+      const pastDate = '01-15-2025';
+
+      const response = await request(app)
+        .post('/api/register')
+        .send({
+          username: 'historyuser',
+          password: 'password123',
+          history: {
+            games: {
+              [pastDate]: {
+                date: pastDate,
+                guessesRemaining: 10,
+                guesses: ['A', 'B', 'C', 'D', 'E'],
+                isComplete: true,
+                wonGame: true,
+              },
+              [futureDate]: {
+                date: futureDate,
+                guessesRemaining: 10,
+                guesses: ['A', 'B', 'C', 'D', 'E'],
+                isComplete: true,
+                wonGame: true,
+              },
+            },
+            currentStreak: 1,
+            lastCompletedDate: futureDate,
+          },
+        })
+        .expect(200);
+
+      assert.strictEqual(response.body.success, true);
+
+      // Past-dated entry should be stored
+      const pastResult = await db.getPuzzleResult('historyuser', pastDate);
+      assert.ok(pastResult);
+
+      // Future-dated entry should NOT be stored
+      const futureResult = await db.getPuzzleResult('historyuser', futureDate);
+      assert.strictEqual(futureResult, null);
     });
   });
 
@@ -970,6 +1034,59 @@ describe('API Endpoints', () => {
         .expect('Content-Type', /json/);
 
       assert.strictEqual(response.body.status, 'ok');
+    });
+  });
+
+  describe('Per-user rate limiting', () => {
+    test('should silently drop requests beyond the per-user window limit', async () => {
+      const db = new MockDatabase();
+      await db.createUser('ratelimituser', 'password123');
+      const app = createApp(db);
+      const token = generateAuthToken('ratelimituser');
+
+      // Limiter is 60 req/min. Fire 60 allowed requests first.
+      for (let i = 0; i < 60; i++) {
+        await request(app)
+          .get('/api/lose-streak')
+          .set('Authorization', `Bearer ${token}`)
+          .expect(200);
+      }
+
+      // The 61st should trip the limiter. The handler destroys the socket,
+      // which surfaces in supertest as a connection error rather than an
+      // HTTP status response.
+      let errored = false;
+      try {
+        await request(app)
+          .get('/api/lose-streak')
+          .set('Authorization', `Bearer ${token}`);
+      } catch {
+        errored = true;
+      }
+      assert.strictEqual(errored, true, 'expected request beyond limit to be dropped');
+    });
+
+    test('should track limits per user independently', async () => {
+      const db = new MockDatabase();
+      await db.createUser('userA', 'password123');
+      await db.createUser('userB', 'password123');
+      const app = createApp(db);
+      const tokenA = generateAuthToken('userA');
+      const tokenB = generateAuthToken('userB');
+
+      // Exhaust userA's budget.
+      for (let i = 0; i < 60; i++) {
+        await request(app)
+          .get('/api/lose-streak')
+          .set('Authorization', `Bearer ${tokenA}`)
+          .expect(200);
+      }
+
+      // userB should still be allowed.
+      await request(app)
+        .get('/api/lose-streak')
+        .set('Authorization', `Bearer ${tokenB}`)
+        .expect(200);
     });
   });
 });

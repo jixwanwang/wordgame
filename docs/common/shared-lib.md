@@ -42,10 +42,28 @@ Pre-generated puzzle data is stored as static TypeScript modules. There is no ru
 |---|---|
 | `lib/puzzles_normal.ts` | Current and upcoming normal-difficulty puzzles |
 | `lib/puzzles_hard.ts` | Hard-difficulty puzzles |
-| `lib/puzzles_normal_historical.ts` | Past normal puzzles |
+| `lib/puzzles_normal_historical.ts` | Past normal puzzles (**server-only** — never bundled into the client) |
 | `lib/puzzles_practice.ts` | Practice mode puzzles |
 
-Puzzles are indexed by date string for O(1) lookup in `server/puzzles.ts`.
+Puzzles are indexed by date string for lookup in `lib/puzzle-lookup.ts` (shared by client and server).
+
+## `lib/puzzle-lookup.ts` — Puzzle Lookup
+
+| Export | Description |
+|---|---|
+| `compareDates(date1, date2)` | Comparator for `MM-DD-YYYY` strings |
+| `getPuzzleByDate(date, difficulty, today)` | Returns the puzzle for the given date, or `null` for a future date, malformed input, or unknown date. Looks at `puzzles_normal` / `puzzles_hard` only. |
+
+The caller passes `today` (MM-DD-YYYY in Pacific Time) so the module has no side effects and no dependency on a time utility. The client imports this directly; the server wraps it in `server/puzzles.ts` and adds a fallback to `puzzles_normal_historical` for past normal dates, keeping the historical archive out of the client bundle.
+
+## `lib/time-utils.ts` — Time Utilities
+
+| Export | Description |
+|---|---|
+| `getTodayInPacificTime()` | Returns today's date in Pacific Time as `MM-DD-YYYY` |
+| `areConsecutiveDays(date1, date2)` | Returns `true` if `date2` is exactly one calendar day after `date1` |
+
+Imported by both the server (for request handling) and the client (for the unauthenticated puzzle-lookup path, history modal, stats modal).
 
 ## Dictionary Files
 

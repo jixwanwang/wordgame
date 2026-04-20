@@ -95,6 +95,17 @@ export const Auth = {
   },
 };
 
+// Error thrown by apiRequest for non-2xx responses. Carries the HTTP status
+// so callers can distinguish auth failures (401/403) from other errors.
+export class ApiError extends Error {
+  readonly status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 // API request helper
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = Auth.getToken();
@@ -117,7 +128,7 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: "Request failed" }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    throw new ApiError(response.status, error.message || `HTTP ${response.status}`);
   }
 
   return response.json();
@@ -176,10 +187,6 @@ export const API = {
       words: string[];
       grid: any;
       wordPositions: Record<string, [number, number][]>;
-      auth?: {
-        username?: string;
-        tokenStatus: string;
-      };
       savedState?: SavedGameState;
       currentStreak?: number;
     }>(`/api/puzzle${queryString}`);

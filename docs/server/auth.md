@@ -29,8 +29,6 @@ The client checks the remaining lifetime of its stored token before each API cal
   - `originalUsername` (column): preserves the user's chosen casing, used for display.
 - The JWT payload carries the lowercase username.
 
-## Optional Auth Middleware
+## Auth Middleware
 
-`GET /api/puzzle` does not require authentication. A middleware attempts to verify the token if present and attaches the username to `req.user`, but lets the request proceed regardless. This allows unauthenticated users to fetch and play puzzles.
-
-Routes that require authentication use a stricter middleware that returns `401` if no valid token is present.
+All data endpoints — including `GET /api/puzzle` — use `authenticateToken`, which returns `401` if the token is missing and `403` if it is invalid or expired. Unauthenticated users never reach the API: they read puzzles client-side from `lib/puzzle-lookup.ts` and persist play history to localStorage only.

@@ -6,7 +6,7 @@ import { CrosswordGrid } from "@/components/crossword-grid";
 import { ChevronLeft, ChevronRight, Check, X } from "lucide-react";
 import { calculateRevealedLetterCount, NUM_GUESSES } from "@shared/lib/game-utils";
 import { Grid8x8 } from "@shared/lib/grid";
-import { getTodayInPacificTime } from "../../../server/time-utils";
+import { getTodayInPacificTime } from "@shared/lib/time-utils";
 import { cn } from "@/lib/utils";
 import { extractRevealedLettersFromGuesses } from "@/lib/grid-helpers";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
