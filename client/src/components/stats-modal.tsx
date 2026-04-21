@@ -103,7 +103,10 @@ export function StatsModal({ open, onOpenChange }: StatsModalProps) {
   };
 
   const isStreakActive = stats?.bestStreak?.dateEnded === getTodayInPacificTime();
-  const title = Auth.isAuthenticated() ? `${Auth.getUsername()}'s stats` : "Your Stats";
+  const title =
+    Auth.isAuthenticated() && Auth.getUsername() != null
+      ? `${Auth.getUsername()}'s stats`
+      : "Your Stats";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
