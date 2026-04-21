@@ -44,6 +44,12 @@ Hint logic lives in `client/src/hooks/use-hint-text.ts` (see [State Management â
 
 Tailwind CSS 3.4 is used throughout. Radix UI primitives underpin interactive components (dialogs, dropdowns, etc.). Icons come from `lucide-react`.
 
+## Social Preview Metadata
+
+`client/index.html` contains Open Graph and Twitter Card meta tags so links to crosses.io render with a rich preview on Reddit, Twitter/X, iMessage, Slack, Discord, etc. The preview image is served at `/og-image.png` from `client/public/og-image.png`. Files under `client/public/` are copied verbatim by Vite (no filename hashing), which is required because external sites cache preview URLs â€” the path must stay stable across builds.
+
+When changing the image: replace `client/public/og-image.png` and then refresh any cached previews using Facebook's Sharing Debugger (`developers.facebook.com/tools/debug/`). Reddit caches previews aggressively and may take hours to refresh. Meta tags must be in the static HTML (not React-rendered), since link crawlers do not execute JavaScript.
+
 ## Data Flow
 
 1. On mount (or when the `?date=` param changes), `game.tsx` dispatches thunks to load the puzzle for today or the specified past date, and (if authenticated) the user's history.
