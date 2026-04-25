@@ -8,6 +8,7 @@ import { AuthModal } from "@/components/auth-modal";
 import { StatsModal } from "@/components/stats-modal";
 import { HistoryModal } from "@/components/history-modal";
 import { FeedbackModal } from "@/components/feedback-modal";
+import { HowToPlayModal } from "@/components/how-to-play-modal";
 import { SquareInput } from "@/components/square-input";
 import {
   CircleUserRound,
@@ -16,6 +17,7 @@ import {
   LogOut,
   Calendar,
   MessageSquareWarning,
+  HelpCircle,
 } from "lucide-react";
 import { getGameNumber, NUM_GUESSES, calculateRevealedLetterCount } from "@shared/lib/game-utils";
 import {
@@ -177,6 +179,7 @@ export default function Game({ difficulty }: GameProps) {
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showHowToPlayModal, setShowHowToPlayModal] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [hasAutoPromptedAuth, setHasAutoPromptedAuth] = useState(false);
   const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -346,7 +349,7 @@ export default function Game({ difficulty }: GameProps) {
   // Handle keyboard input
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (showAuthModal || showFeedbackModal) return;
+      if (showAuthModal || showFeedbackModal || showHowToPlayModal) return;
       if (gameStatus !== "playing") return;
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       if (e.key === "Enter") {
@@ -382,6 +385,7 @@ export default function Game({ difficulty }: GameProps) {
     showToast,
     showAuthModal,
     showFeedbackModal,
+    showHowToPlayModal,
     longestWordInPuzzle,
   ]);
 
@@ -459,14 +463,24 @@ export default function Game({ difficulty }: GameProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="text-gray-500 hover:text-gray-700 transition-colors"
-                data-testid="login-button"
-                aria-label="Login"
-              >
-                <UserRound className="w-6 h-6" />
-              </button>
+              <>
+                <button
+                  onClick={() => setShowHowToPlayModal(true)}
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                  data-testid="how-to-play-button"
+                  aria-label="How to play"
+                >
+                  <HelpCircle className="w-6 h-6" />
+                </button>
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                  data-testid="login-button"
+                  aria-label="Login"
+                >
+                  <UserRound className="w-6 h-6" />
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -498,6 +512,9 @@ export default function Game({ difficulty }: GameProps) {
 
       {/* Feedback Modal */}
       <FeedbackModal open={showFeedbackModal} onOpenChange={setShowFeedbackModal} />
+
+      {/* How To Play Modal */}
+      <HowToPlayModal open={showHowToPlayModal} onOpenChange={setShowHowToPlayModal} />
 
       {/* History Modal */}
       <HistoryModal

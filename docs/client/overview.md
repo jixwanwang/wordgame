@@ -33,6 +33,7 @@ All components live in `client/src/components/`.
 | `StatsModal` | User statistics summary |
 | `HistoryModal` | Browse past puzzles; shows score for completed dates and a "Play [date]" button for unplayed past dates |
 | `FeedbackModal` | Submit feedback with a type dropdown ("Missing word", "Word should be removed", "Other") and a 280-character text input; prepends the selected type to the text before sending to the server |
+| `HowToPlayModal` | Visual walkthrough of the rules. Entry point is a question-mark icon shown only for unauthenticated users (left of the login icon); authenticated users do not see it |
 
 ## New-User Hint System
 
