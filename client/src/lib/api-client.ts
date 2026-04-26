@@ -59,7 +59,11 @@ export const Auth = {
   },
 
   getUsername(): string | null {
-    return cookies.get("username");
+    const cookieUsername = cookies.get("username");
+    if (cookieUsername !== null) return cookieUsername;
+    const token = this.getToken();
+    if (token === null) return null;
+    return decodeJWT(token)?.username ?? null;
   },
 
   setUsername(username: string) {
