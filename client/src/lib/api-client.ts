@@ -3,6 +3,7 @@
  */
 
 import type { GameHistory, SavedGameState, Stats } from "@shared/lib/schema";
+import { AUTH_KEY } from "./game-storage";
 
 // @ts-ignore - Vite env types
 const API_BASE_URL = import.meta.env?.VITE_API_URL || "";
@@ -52,10 +53,12 @@ export const Auth = {
 
   setToken(token: string) {
     cookies.set("auth_token", token, 30); // 30 days
+    localStorage.setItem(AUTH_KEY, token);
   },
 
   clearToken() {
     cookies.delete("auth_token");
+    localStorage.removeItem(AUTH_KEY);
   },
 
   getUsername(): string | null {
@@ -259,9 +262,12 @@ export const API = {
   // Refresh the auth token
   async refreshToken(): Promise<boolean> {
     try {
-      const response = await apiRequest<{ success: boolean; token?: string }>("/api/refresh-token", {
-        method: "POST",
-      });
+      const response = await apiRequest<{ success: boolean; token?: string }>(
+        "/api/refresh-token",
+        {
+          method: "POST",
+        },
+      );
 
       if (response.success && response.token) {
         Auth.setToken(response.token);

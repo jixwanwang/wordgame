@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { AuthModal } from "@/components/auth-modal";
 import { Auth } from "@/lib/api-client";
 import { LogIn, LogOut, User } from "lucide-react";
+import { useLocation } from "wouter";
 
 /**
  * Authentication button component
@@ -12,6 +13,7 @@ import { LogIn, LogOut, User } from "lucide-react";
 export function AuthButton() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
+  const [, navigate] = useLocation();
 
   // Check auth status on mount
   useEffect(() => {
@@ -25,6 +27,7 @@ export function AuthButton() {
   const handleLogout = () => {
     Auth.logout();
     setUsername(null);
+    navigate("/");
   };
 
   if (username) {
@@ -34,12 +37,7 @@ export function AuthButton() {
           <User className="w-4 h-4" />
           <span>{username}</span>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleLogout}
-          className="gap-1"
-        >
+        <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-1">
           <LogOut className="w-4 h-4" />
           Log out
         </Button>
@@ -49,12 +47,7 @@ export function AuthButton() {
 
   return (
     <>
-      <Button
-        variant="default"
-        size="sm"
-        onClick={() => setShowAuthModal(true)}
-        className="gap-1"
-      >
+      <Button variant="default" size="sm" onClick={() => setShowAuthModal(true)} className="gap-1">
         <LogIn className="w-4 h-4" />
         Log in
       </Button>

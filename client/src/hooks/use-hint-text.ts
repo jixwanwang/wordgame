@@ -1,8 +1,10 @@
-import { useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { useAppSelector } from "@/store/hooks";
 import { selectGameStatus, selectGuesses } from "@/store/selectors/gameSelectors";
 import { selectRevealedLetters } from "@/store/selectors/gridSelectors";
 import { selectCurrentPuzzle } from "@/store/selectors/puzzleSelectors";
+import { STORAGE_KEY } from "@/lib/game-storage";
+import { getTodayInPacificTime } from "@shared/lib/time-utils";
 
 /**
  * Returns a contextual hint string for brand-new users, cycling through four
@@ -14,7 +16,8 @@ export function useHintText(): string | null {
   const currentPuzzle = useAppSelector(selectCurrentPuzzle);
   const guesses = useAppSelector(selectGuesses);
 
-  const isNewUser = useRef(localStorage.getItem("wordgame-history") === null).current;
+  const today = getTodayInPacificTime();
+  const isNewUser = localStorage.getItem(STORAGE_KEY) === null && currentPuzzle?.date === today;
 
   // Find the letter at a grid cell shared by 2+ words to suggest in hint 1.
   const bestSharedLetter = useMemo(() => {

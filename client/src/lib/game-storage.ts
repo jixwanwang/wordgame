@@ -12,7 +12,8 @@ export const getDefaultGameState = (date: string): SavedGameState => ({
 // Re-export GameHistory for backward compatibility
 export type { GameHistory };
 
-const STORAGE_KEY = "wordgame-history";
+export const STORAGE_KEY = "wordgame-history";
+export const AUTH_KEY = "wordgame-token";
 
 export function getGameHistory(): GameHistory {
   const stored = localStorage.getItem(STORAGE_KEY);
@@ -37,11 +38,7 @@ export function getGameForDay(date: string): SavedGameState {
 }
 
 // Action: Add a guess for a day
-export function addGuess(
-  date: string,
-  guessesRemaining: number,
-  guessInput: string,
-): void {
+export function addGuess(date: string, guessesRemaining: number, guessInput: string): void {
   const history = getGameHistory();
   const existingGame = history.games[date];
 
