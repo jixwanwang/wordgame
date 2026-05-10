@@ -4,7 +4,7 @@ Frontend usage analytics are sent to PostHog (US region). The integration lives 
 
 ## Setup
 
-Configured via the `VITE_POSTHOG_API_KEY` environment variable (read by Vite at build time, embedded in the client bundle — PostHog project keys are public ingestion keys, safe to expose).
+Configured via the `VITE_POSTHOG_API_KEY` environment variable (read by Vite at build time, embedded in the client bundle — PostHog project keys are public ingestion keys, safe to expose). Vite loads it from the repo-root `.env` (`envDir: ".."` in `vite.config.ts`, since `root` is `./client`).
 
 If the key is missing or empty, the analytics module is a silent no-op. This is the expected dev behavior when no `.env` is present.
 
