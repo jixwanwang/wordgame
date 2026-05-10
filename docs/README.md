@@ -56,6 +56,7 @@ The project is structured as a single-package monorepo. Client and server share 
 - [Client Overview](client/overview.md) — React app, components, routing
 - [State Management](client/state.md) — Redux slices, thunks, selectors
 - [Client Storage](client/storage.md) — localStorage, cookies, API client
+- [Client Analytics](client/analytics.md) — PostHog integration, events, properties
 
 ### Server
 - [Server Overview](server/overview.md) — Express app, endpoints, middleware

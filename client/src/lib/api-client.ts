@@ -4,6 +4,7 @@
 
 import type { GameHistory, SavedGameState, Stats } from "@shared/lib/schema";
 import { AUTH_KEY } from "./game-storage";
+import { identifyUser, resetAnalyticsUser } from "./analytics";
 
 // @ts-ignore - Vite env types
 const API_BASE_URL = import.meta.env?.VITE_API_URL || "";
@@ -71,6 +72,7 @@ export const Auth = {
 
   setUsername(username: string) {
     cookies.set("username", username, 30);
+    identifyUser(username);
   },
 
   clearUsername() {
@@ -84,6 +86,7 @@ export const Auth = {
   logout() {
     this.clearToken();
     this.clearUsername();
+    resetAnalyticsUser();
   },
 
   // Check if token expires in 5 days or less

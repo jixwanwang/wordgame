@@ -37,7 +37,7 @@ const LETTER_SCORES: { [key: string]: number } = {
   Z: 7,
 };
 
-function calculatePuzzleScore(letters: string[]): number {
+export function calculatePuzzleScore(letters: string[]): number {
   return [...letters].reduce((acc, letter) => acc + LETTER_SCORES[letter], 0);
 }
 
@@ -176,8 +176,7 @@ export function generate_puzzle_internal(difficulty: Difficulty, words: string[]
 
   // Calculate and validate puzzle score
   const puzzleScore = calculatePuzzleScore(Object.keys(letterCounts));
-  const minScore = numLetters * 2 - 1;
-  if (puzzleScore < minScore) {
+  if (puzzleScore < 16 || puzzleScore > numLetters * 2 + 4) {
     return null;
   }
 
@@ -383,7 +382,6 @@ export function generateAndMigratePuzzles(numNewPuzzles: number): void {
   } else {
     console.log("No new puzzles to add to historical.");
   }
-  console.log("");
 
   // Find the last date in current puzzles to determine where to start generating
   const startDate = new Date(today);
@@ -441,6 +439,8 @@ export function generateAndMigratePuzzles(numNewPuzzles: number): void {
   );
 }
 
-// Run with 90 new puzzles by default
-const numPuzzles = process.argv[2] ? parseInt(process.argv[2], 10) : 90;
-generateAndMigratePuzzles(numPuzzles);
+// Run with 90 new puzzles by default — only when invoked directly, not when imported
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const numPuzzles = process.argv[2] ? parseInt(process.argv[2], 10) : 90;
+  generateAndMigratePuzzles(numPuzzles);
+}

@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { API, ApiError, Auth } from "@/lib/api-client";
-import { getGameForDay, addGuess, completeGame, getCurrentStreak, getCurrentLoseStreak } from "@/lib/game-storage";
+import { getGameForDay, addGuess, completeGame, getCurrentStreak, getCurrentLoseStreak, STORAGE_KEY } from "@/lib/game-storage";
+import { trackPuzzleViewed, trackPuzzleStarted, trackPuzzleGuess, trackPuzzleCompleted } from "@/lib/analytics";
 import type { RootState } from "../index";
 import type { Guess, SavedGameState } from "@shared/lib/schema";
 import type { Puzzle } from "@shared/lib/puzzles_types";
@@ -113,6 +114,15 @@ export const fetchPuzzleThunk = createAsyncThunk(
       dispatch(setPuzzle(puzzle));
       dispatch(setPuzzleDate(puzzle.date));
 
+      const today = getTodayInPacificTime();
+      trackPuzzleViewed({
+        difficulty,
+        puzzle_date: puzzle.date,
+        is_past_puzzle: puzzle.date !== today,
+        is_authenticated: Auth.isAuthenticated(),
+        hints_shown: localStorage.getItem(STORAGE_KEY) === null && puzzle.date === today,
+      });
+
       if (savedState && savedState.guesses && savedState.guesses.length > 0) {
         dispatch(
           restoreGameState({
@@ -168,6 +178,18 @@ export const makeGuessThunk = createAsyncThunk(
       return;
     }
 
+    const isFirstGuess = gameState.guesses.length === 0;
+    if (isFirstGuess && puzzleState.date != null) {
+      trackPuzzleStarted({
+        difficulty: gameState.difficulty,
+        puzzle_date: puzzleState.date,
+        is_past_puzzle: puzzleState.date !== getTodayInPacificTime(),
+        is_authenticated: Auth.isAuthenticated(),
+      });
+    }
+
+    let isCorrect = false;
+
     if (guess.type === "letter") {
       const letter = guess.value.toUpperCase();
 
@@ -177,9 +199,24 @@ export const makeGuessThunk = createAsyncThunk(
       }
 
       dispatch(makeLetterGuess(letter));
+      isCorrect = puzzleState.words.some((w) => w.toUpperCase().includes(letter));
     } else if (guess.type === "word") {
       const word = guess.value.toUpperCase();
       dispatch(makeWordGuess({ word }));
+      isCorrect = puzzleState.words.map((w) => w.toUpperCase()).includes(word);
+    }
+
+    if (puzzleState.date != null) {
+      trackPuzzleGuess({
+        difficulty: gameState.difficulty,
+        puzzle_date: puzzleState.date,
+        is_past_puzzle: puzzleState.date !== getTodayInPacificTime(),
+        is_authenticated: Auth.isAuthenticated(),
+        guess_type: guess.type,
+        guess_value: guess.value.toUpperCase(),
+        guess_number: gameState.guesses.length + 1,
+        is_correct: isCorrect,
+      });
     }
 
     // Check win/lose conditions after state updates
@@ -210,6 +247,16 @@ export const makeGuessThunk = createAsyncThunk(
 
       if (isGameComplete) {
         const wonGame = revealedCount === totalLetters;
+
+        trackPuzzleCompleted({
+          difficulty: gameState.difficulty,
+          puzzle_date: puzzleState.date,
+          is_past_puzzle: puzzleState.date !== getTodayInPacificTime(),
+          is_authenticated: Auth.isAuthenticated(),
+          won: wonGame,
+          guesses_used: updatedState.guesses.length,
+          letters_revealed: revealedCount,
+        });
 
         // Always complete in local storage
         const localStreak = completeGame(puzzleState.date, wonGame);
