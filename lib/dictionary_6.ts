@@ -289,6 +289,7 @@ export const DICTIONARY_6 = [
   "METRIC",
   "MIDDLE",
   "MINING",
+  "MINION",
   "MINUTE",
   "MIRROR",
   "MOBILE",
