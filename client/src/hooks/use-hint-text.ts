@@ -5,6 +5,7 @@ import { selectRevealedLetters } from "@/store/selectors/gridSelectors";
 import { selectCurrentPuzzle } from "@/store/selectors/puzzleSelectors";
 import { STORAGE_KEY } from "@/lib/game-storage";
 import { getTodayInPacificTime } from "@shared/lib/time-utils";
+import { Auth } from "@/lib/api-client";
 
 /**
  * Returns a contextual hint string for brand-new users, cycling through four
@@ -17,7 +18,10 @@ export function useHintText(): string | null {
   const guesses = useAppSelector(selectGuesses);
 
   const today = getTodayInPacificTime();
-  const isNewUser = localStorage.getItem(STORAGE_KEY) === null && currentPuzzle?.date === today;
+  const isNewUser =
+    localStorage.getItem(STORAGE_KEY) === null &&
+    currentPuzzle?.date === today &&
+    !Auth.isAuthenticated();
 
   // Find the letter at a grid cell shared by 2+ words to suggest in hint 1.
   const bestSharedLetter = useMemo(() => {
