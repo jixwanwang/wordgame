@@ -357,6 +357,7 @@ export const DICTIONARY_6 = [
   "PONCHO",
   "POODLE",
   "PORTAL",
+  "PORTER",
   "POWDER",
   "PRAISE",
   "PRAYER",
