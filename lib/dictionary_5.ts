@@ -484,6 +484,7 @@ export const DICTIONARY_5 = [
   "CURSE",
   "CURVE",
   "CURVY",
+  "CUSHY",
   "CUTIE",
   "CYBER",
   "CYCLE",
