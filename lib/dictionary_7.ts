@@ -163,6 +163,7 @@ export const DICTIONARY_7 = [
   "DIVORCE",
   "DOLPHIN",
   "DOORWAY",
+  "DUALITY",
   "DYNAMIC",
   "EARNEST",
   "EASTERN",

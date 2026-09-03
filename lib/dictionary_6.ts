@@ -580,6 +580,7 @@ export const DICTIONARY_6 = [
   "WOODEN",
   "WORKER",
   "WORTHY",
+  "WREATH",
   "WRITER",
   "YELLOW",
   "YOGURT",
