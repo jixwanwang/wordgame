@@ -411,6 +411,7 @@ export const DICTIONARY_6 = [
   "RETURN",
   "REVEAL",
   "REVIEW",
+  "REVOKE",
   "REWARD",
   "RHYTHM",
   "RIDING",
